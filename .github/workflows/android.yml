@@ -33,7 +33,9 @@ jobs:
             echo "Could not locate Android SDK manager under $SDK_ROOT"
             exit 1
           fi
+          set +o pipefail
           yes | "$SDKMANAGER" --licenses
+          set -o pipefail
           "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Run unit tests and build debug APK
