@@ -95,6 +95,8 @@ public class UnifiedVpnService extends VpnService {
         final long generation = ++tunnelGeneration;
         isOpenVpnHandoff = false;
 
+        ProtocolType previousProtocol = currentProfile != null
+                ? currentProfile.getProtocolType() : lastRunningProtocol;
         boolean isHeterogeneous = (currentProfile != null && currentProfile.getProtocolType() != profile.getProtocolType())
                 || (lastRunningProtocol != null && lastRunningProtocol != profile.getProtocolType()
                     && (System.currentTimeMillis() - lastEngineStopTime < 2500L));
@@ -115,7 +117,9 @@ public class UnifiedVpnService extends VpnService {
         }
 
         // Ensure a previous native OpenVPN service is no longer holding the TUN.
-        if (isHeterogeneous || oldEngine != null || lastRunningProtocol == ProtocolType.OPENVPN) {
+        // OpenVpnEngine.stop() already sends the native disconnect request.
+        // Only send a direct request if a native OpenVPN handoff has no engine object.
+        if (oldEngine == null && previousProtocol == ProtocolType.OPENVPN) {
             disconnectNativeOpenVpn();
         }
 
@@ -345,18 +349,25 @@ public class UnifiedVpnService extends VpnService {
         if (currentProfile != null) {
             lastRunningProtocol = currentProfile.getProtocolType();
         }
+        ProtocolType previousProtocol = currentProfile != null
+                ? currentProfile.getProtocolType() : lastRunningProtocol;
         lastEngineStopTime = System.currentTimeMillis();
 
-        if (activeEngine != null) {
+        IVpnEngine engineToStop = activeEngine;
+        if (engineToStop != null) {
             try {
-                activeEngine.stop();
+                engineToStop.stop();
             } catch (Exception e) {
                 LogManager.log("UnifiedVpnService", "停止 VPN 引擎失败: " + e.getMessage());
             }
             activeEngine = null;
         }
 
-        disconnectNativeOpenVpn();
+        // The engine owns its cleanup. Only directly stop a handed-off native
+        // OpenVPN service when its engine object is no longer available.
+        if (engineToStop == null && previousProtocol == ProtocolType.OPENVPN) {
+            disconnectNativeOpenVpn();
+        }
 
         currentState = ConnectionState.DISCONNECTED;
         currentProfile = null;

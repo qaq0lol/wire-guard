@@ -52,38 +52,30 @@ public class PortSpeedTester {
         return measureLatency(host, ip, port, "TCP", timeoutMs);
     }
 
-    public static long measureLatency(String host, String ip, int port, String transport, int timeoutMs) {
+        public static long measureLatency(String host, String ip, int port, String transport, int timeoutMs) {
         String target = (ip != null && !ip.trim().isEmpty()) ? ip.trim() : host;
-        if (target == null || target.isEmpty()) {
-            return -2;
-        }
+        if (target == null || target.trim().isEmpty() || port < 1 || port > 65535) return -2;
 
         InetAddress resolvedAddress = null;
         try {
             resolvedAddress = InetAddress.getByName(target);
             target = resolvedAddress.getHostAddress();
         } catch (Exception ignored) {
-            // Keep the original target for TCP fallback.
-        }
-
-        long reachabilityLatency = measureReachabilityLatency(
-                resolvedAddress != null ? resolvedAddress : safeResolve(target), timeoutMs);
-        if (reachabilityLatency > 0) {
-            return reachabilityLatency;
+            // The transport-specific probe reports resolution failure.
         }
 
         if ("UDP".equalsIgnoreCase(transport)) {
-            if (port == 53) {
-                return measureDnsLatency(target, timeoutMs);
-            }
-            if (port == 123) {
-                return measureNtpLatency(target, timeoutMs);
-            }
+            // DNS and NTP can be tested with protocol-valid requests.
+            if (port == 53) return measureDnsLatency(target, timeoutMs);
+            if (port == 123) return measureNtpLatency(target, timeoutMs);
 
-            long fallback = measureTcpFallback(target, timeoutMs);
-            return fallback > 0 ? fallback : -2;
+            // Generic UDP has no connection handshake. This is only approximate host
+            // reachability; never substitute a response from unrelated TCP ports.
+            InetAddress address = resolvedAddress != null ? resolvedAddress : safeResolve(target);
+            return measureReachabilityLatency(address, timeoutMs);
         }
 
+        // For TCP, probe the exact configured endpoint instead of just the host.
         return measureTcpLatency(target, port, timeoutMs);
     }
 
@@ -95,10 +87,8 @@ public class PortSpeedTester {
         }
     }
 
-    private static long measureReachabilityLatency(InetAddress address, int timeoutMs) {
-        if (address == null) {
-            return -2;
-        }
+        private static long measureReachabilityLatency(InetAddress address, int timeoutMs) {
+        if (address == null) return -2;
 
         long start = System.currentTimeMillis();
         try {
@@ -106,6 +96,7 @@ public class PortSpeedTester {
                 return Math.max(1, System.currentTimeMillis() - start);
             }
         } catch (Exception ignored) {
+            // Fall back to the platform ping binary where available.
         }
 
         Process process = null;
@@ -115,18 +106,18 @@ public class PortSpeedTester {
                     binary, "-c", "1", "-W", "1", address.getHostAddress()
             ).redirectErrorStream(true).start();
 
+            // Wait with a deadline before reading process output. A one-packet ping
+            // produces a small output, so the pipe cannot normally fill and block the child.
+            if (!process.waitFor(Math.max(2, timeoutMs / 1000 + 1), TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                return -2;
+            }
+
             StringBuilder output = new StringBuilder();
             try (java.io.BufferedReader reader =
                          new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
                 String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append('\n');
-                }
-            }
-
-            if (!process.waitFor(Math.max(2, timeoutMs / 1000 + 1), TimeUnit.SECONDS)) {
-                process.destroy();
-                return -2;
+                while ((line = reader.readLine()) != null) output.append(line).append('\n');
             }
 
             Matcher matcher = PING_TIME_PATTERN.matcher(output);
@@ -134,15 +125,11 @@ public class PortSpeedTester {
                 double ms = Double.parseDouble(matcher.group(1));
                 return Math.max(1, Math.round(ms));
             }
-
-            if (output.toString().contains("time<1")) {
-                return 1;
-            }
+            if (output.toString().contains("time<1")) return 1;
         } catch (Exception ignored) {
+            // ICMP or ping may be unavailable on a given Android build.
         } finally {
-            if (process != null) {
-                process.destroy();
-            }
+            if (process != null) process.destroy();
         }
         return -2;
     }
@@ -164,8 +151,8 @@ public class PortSpeedTester {
             socket.connect(new InetSocketAddress(target, port), timeoutMs);
             return Math.max(1, System.currentTimeMillis() - start);
         } catch (ConnectException ce) {
-            long rtt = Math.max(1, System.currentTimeMillis() - start);
-            return rtt <= timeoutMs ? rtt : -2;
+            // Refused means the configured TCP service is not listening on this port.
+            return -2;
         } catch (SocketTimeoutException | UnknownHostException e) {
             return -2;
         } catch (Exception e) {
@@ -230,30 +217,30 @@ public class PortSpeedTester {
      * Asynchronously tests a single port item and triggers callback.
      * Duplicate tests for the same item are ignored.
      */
-    public static void testSinglePort(PresetPortItem item, SpeedTestListener listener) {
-        if (item == null) {
-            return;
-        }
+        public static void testSinglePort(PresetPortItem item, SpeedTestListener listener) {
+        if (item == null) return;
         synchronized (item) {
-            if (item.isTesting()) {
-                return;
-            }
+            if (item.isTesting()) return;
             item.setTesting(true);
         }
         EXECUTOR.execute(() -> {
+            long latency = -2;
             try {
-                long latency = measureLatency(
-                        item.getHost(),
-                        item.getIp(),
-                        item.getPort(),
-                        item.getTransport(),
-                        DEFAULT_TIMEOUT_MS);
-                item.setLatencyMs(latency);
-                if (listener != null) {
-                    listener.onPortTested(item, latency);
-                }
+                latency = measureLatency(
+                        item.getHost(), item.getIp(), item.getPort(),
+                        item.getTransport(), DEFAULT_TIMEOUT_MS);
+            } catch (Exception e) {
+                LogManager.warn("PortSpeedTester", "单节点测速异常: " + e.getMessage());
             } finally {
+                item.setLatencyMs(latency);
                 item.setTesting(false);
+            }
+            if (listener != null) {
+                try {
+                    listener.onPortTested(item, latency);
+                } catch (Exception e) {
+                    LogManager.warn("PortSpeedTester", "测速回调异常: " + e.getMessage());
+                }
             }
         });
     }
@@ -262,7 +249,7 @@ public class PortSpeedTester {
      * Concurrently tests a list of port items across the thread pool.
      * Items that are already being tested are skipped.
      */
-    public static void testAllPorts(List<PresetPortItem> ports, SpeedTestListener listener) {
+        public static void testAllPorts(List<PresetPortItem> ports, SpeedTestListener listener) {
         if (ports == null || ports.isEmpty()) {
             if (listener != null) listener.onAllCompleted(0, 0);
             return;
@@ -272,9 +259,7 @@ public class PortSpeedTester {
         for (PresetPortItem item : ports) {
             if (item == null) continue;
             synchronized (item) {
-                if (item.isTesting()) {
-                    continue;
-                }
+                if (item.isTesting()) continue;
                 item.setTesting(true);
                 pending.add(item);
             }
@@ -288,27 +273,34 @@ public class PortSpeedTester {
 
         final AtomicInteger completed = new AtomicInteger(0);
         final AtomicInteger success = new AtomicInteger(0);
-
         for (PresetPortItem item : pending) {
             EXECUTOR.execute(() -> {
+                long latency = -2;
                 try {
-                    long latency = measureLatency(
-                            item.getHost(),
-                            item.getIp(),
-                            item.getPort(),
-                            item.getTransport(),
-                            DEFAULT_TIMEOUT_MS);
-                    item.setLatencyMs(latency);
-                    if (latency > 0) {
-                        success.incrementAndGet();
-                    }
-                    if (listener != null) {
-                        listener.onPortTested(item, latency);
-                    }
+                    latency = measureLatency(
+                            item.getHost(), item.getIp(), item.getPort(),
+                            item.getTransport(), DEFAULT_TIMEOUT_MS);
+                } catch (Exception e) {
+                    LogManager.warn("PortSpeedTester", "节点测速异常: " + e.getMessage());
                 } finally {
+                    item.setLatencyMs(latency);
                     item.setTesting(false);
-                    if (completed.incrementAndGet() == total && listener != null) {
+                }
+
+                if (latency > 0) success.incrementAndGet();
+                if (listener != null) {
+                    try {
+                        listener.onPortTested(item, latency);
+                    } catch (Exception e) {
+                        LogManager.warn("PortSpeedTester", "节点测速回调异常: " + e.getMessage());
+                    }
+                }
+
+                if (completed.incrementAndGet() == total && listener != null) {
+                    try {
                         listener.onAllCompleted(success.get(), total);
+                    } catch (Exception e) {
+                        LogManager.warn("PortSpeedTester", "全量测速完成回调异常: " + e.getMessage());
                     }
                 }
             });

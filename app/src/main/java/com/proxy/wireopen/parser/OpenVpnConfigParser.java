@@ -39,7 +39,7 @@ public class OpenVpnConfigParser {
 
                 // Check for block closing tag </tag>
                 if (insideTag) {
-                    if (trimmed.equalsIgnoreCase("</" + currentTag + ">") || trimmed.toLowerCase().startsWith("</" + currentTag)) {
+                    if (trimmed.equalsIgnoreCase("</" + currentTag + ">")) {
                         assignTagContent(config, currentTag, tagBuffer.toString().trim());
                         insideTag = false;
                         currentTag = "";
@@ -255,6 +255,7 @@ public class OpenVpnConfigParser {
             case "tls-crypt-v2":
             case "secret":
                 config.setTlsAuthKey(content);
+                config.setTlsAuthTag(tag);
                 break;
         }
     }
@@ -343,7 +344,9 @@ public class OpenVpnConfigParser {
             sb.append("<key>\n").append(config.getClientKey()).append("\n</key>\n");
         }
         if (config.getTlsAuthKey() != null && !config.getTlsAuthKey().isEmpty()) {
-            sb.append("<tls-auth>\n").append(config.getTlsAuthKey()).append("\n</tls-auth>\n");
+            String tlsTag = config.getTlsAuthTag() != null ? config.getTlsAuthTag() : "tls-auth";
+            sb.append("<").append(tlsTag).append(">\n")
+                    .append(config.getTlsAuthKey()).append("\n</").append(tlsTag).append(">\n");
         }
 
         return sb.toString();

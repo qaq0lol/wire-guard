@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -14,6 +15,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.proxy.wireopen.R;
 import com.proxy.wireopen.model.AppItem;
+import com.proxy.wireopen.model.ConnectionState;
+import com.proxy.wireopen.service.UnifiedVpnService;
 import com.proxy.wireopen.util.SplitTunnelManager;
 
 import java.util.ArrayList;
@@ -116,6 +119,10 @@ public class RoutingAppAdapter extends RecyclerView.Adapter<RoutingAppAdapter.Vi
             if (item.isSelected() == checked) return;
             item.setSelected(checked);
             SplitTunnelManager.togglePackage(context, item.getPackageName(), checked);
+            ConnectionState state = UnifiedVpnService.getCurrentState();
+            if (state == ConnectionState.CONNECTED || state == ConnectionState.CONNECTING) {
+                Toast.makeText(context, "分流应用设置已保存，断开并重新连接后生效", Toast.LENGTH_LONG).show();
+            }
             if (selectionListener != null) {
                 selectionListener.onSelectionChanged(getSelectedCount());
             }

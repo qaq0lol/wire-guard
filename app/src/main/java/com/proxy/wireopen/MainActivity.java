@@ -281,11 +281,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateProtectionBadgeText() {
         if (!isTimerRunning) return;
-        long elapsed = (System.currentTimeMillis() - connectionStartTime) / 1000;
-        long h = elapsed / 3600;
-        long m = (elapsed % 3600) / 60;
-        long s = elapsed % 60;
-        String timeStr = String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s);
+        TrafficStatsManager stats = TrafficStatsManager.getInstance();
+        String timeStr;
+        if (stats != null && stats.isSessionActive()) {
+            timeStr = stats.getSessionDurationFormatted();
+        } else {
+            long elapsed = (System.currentTimeMillis() - connectionStartTime) / 1000;
+            long h = elapsed / 3600;
+            long m = (elapsed % 3600) / 60;
+            long s = elapsed % 60;
+            timeStr = String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s);
+        }
         if (egressProbeStatus != null) {
             tvProtectionBadge.setText(egressProbeStatus + " · " + timeStr);
             if (egressProbeStatus.startsWith("🟢")) {
@@ -301,108 +307,108 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+        private int request204(String endpoint, int timeoutMs) throws IOException {
+        java.net.HttpURLConnection connection = null;
+        try {
+            connection = (java.net.HttpURLConnection) new java.net.URL(endpoint).openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(timeoutMs);
+            connection.setReadTimeout(timeoutMs);
+            connection.setInstanceFollowRedirects(false);
+            connection.setRequestProperty("User-Agent", "WireOpenProxy/1.2.9 (Android)");
+            return connection.getResponseCode();
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    private String readHttpText(String endpoint, int timeoutMs) throws IOException {
+        java.net.HttpURLConnection connection = null;
+        try {
+            connection = (java.net.HttpURLConnection) new java.net.URL(endpoint).openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(timeoutMs);
+            connection.setReadTimeout(timeoutMs);
+            connection.setRequestProperty("User-Agent", "WireOpenProxy/1.2.9 (Android)");
+            int code = connection.getResponseCode();
+            if (code != java.net.HttpURLConnection.HTTP_OK) throw new IOException("HTTP " + code);
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                String line = reader.readLine();
+                return line == null ? "" : line.trim();
+            }
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
     private void probeEgressConnectivity() {
         if (!isProbingEgress.compareAndSet(false, true)) return;
         egressProbeStatus = "🟡 探测外网中";
         updateProtectionBadgeText();
 
         new Thread(() -> {
-            long startTime = System.currentTimeMillis();
             boolean isReachable = false;
-            long latencyMs = -1;
+            long latencyMs = -1L;
             String publicIp = null;
-
-            // 1. Probe HTTP 204 endpoint via active tunnel
+            long probeStarted = System.currentTimeMillis();
             try {
-                java.net.URL url = new java.net.URL("http://cp.cloudflare.com/generate_204");
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(4000);
-                conn.setReadTimeout(4000);
-                conn.setInstanceFollowRedirects(false);
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-                int respCode = conn.getResponseCode();
-                if (respCode == 204 || respCode == 200) {
+                int code = request204("https://cp.cloudflare.com/generate_204", 4000);
+                if (code == 204 || code == 200) {
                     isReachable = true;
-                    latencyMs = System.currentTimeMillis() - startTime;
+                    latencyMs = Math.max(1L, System.currentTimeMillis() - probeStarted);
                 }
-                conn.disconnect();
-            } catch (Exception e) {
-                // Fallback to gstatic 204
-                try {
-                    long t0 = System.currentTimeMillis();
-                    java.net.URL url = new java.net.URL("http://www.gstatic.com/generate_204");
-                    java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(3000);
-                    conn.setReadTimeout(3000);
-                    conn.setInstanceFollowRedirects(false);
-                    int respCode = conn.getResponseCode();
-                    if (respCode == 204 || respCode == 200) {
-                        isReachable = true;
-                        latencyMs = System.currentTimeMillis() - t0;
-                    }
-                    conn.disconnect();
-                } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                // Try another HTTPS endpoint below.
             }
-
-            // 2. Query public egress IP
+            if (!isReachable) {
+                probeStarted = System.currentTimeMillis();
+                try {
+                    int code = request204("https://www.gstatic.com/generate_204", 3500);
+                    if (code == 204 || code == 200) {
+                        isReachable = true;
+                        latencyMs = Math.max(1L, System.currentTimeMillis() - probeStarted);
+                    }
+                } catch (Exception ignored) {
+                    // Both HTTPS probes failed.
+                }
+            }
             if (isReachable) {
                 try {
-                    java.net.URL ipUrl = new java.net.URL("https://api.ipify.org");
-                    java.net.HttpURLConnection ipConn = (java.net.HttpURLConnection) ipUrl.openConnection();
-                    ipConn.setConnectTimeout(3500);
-                    ipConn.setReadTimeout(3500);
-                    ipConn.setRequestProperty("User-Agent", "Mozilla/5.0");
-                    if (ipConn.getResponseCode() == 200) {
-                        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(ipConn.getInputStream()));
-                        String line = reader.readLine();
-                        if (line != null && !line.trim().isEmpty()) {
-                            publicIp = line.trim();
-                        }
-                        reader.close();
-                    }
-                    ipConn.disconnect();
-                } catch (Exception e) {
-                    // Fallback to icanhazip
+                    publicIp = readHttpText("https://api.ipify.org", 3500);
+                } catch (Exception firstError) {
                     try {
-                        java.net.URL ipUrl = new java.net.URL("https://icanhazip.com");
-                        java.net.HttpURLConnection ipConn = (java.net.HttpURLConnection) ipUrl.openConnection();
-                        ipConn.setConnectTimeout(3000);
-                        ipConn.setReadTimeout(3000);
-                        if (ipConn.getResponseCode() == 200) {
-                            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(ipConn.getInputStream()));
-                            String line = reader.readLine();
-                            if (line != null && !line.trim().isEmpty()) {
-                                publicIp = line.trim();
-                            }
-                            reader.close();
-                        }
-                        ipConn.disconnect();
-                    } catch (Exception ignored) {}
+                        publicIp = readHttpText("https://icanhazip.com", 3000);
+                    } catch (Exception ignored) {
+                        // Connectivity works, but the IP lookup failed.
+                    }
                 }
             }
 
             final boolean reachable = isReachable;
-            final long lat = latencyMs;
+            final long latency = latencyMs;
             final String ip = publicIp;
-
             runOnUiThread(() -> {
                 isProbingEgress.set(false);
-                if (UnifiedVpnService.getCurrentState() != ConnectionState.CONNECTED) {
+                if (isFinishing()
+                        || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())
+                        || UnifiedVpnService.getCurrentState() != ConnectionState.CONNECTED) {
                     return;
                 }
                 if (reachable) {
-                    if (ip != null && !ip.isEmpty()) {
-                        egressProbeStatus = "🟢 外网已通 · " + ip + " (" + (lat > 0 ? lat + "ms" : "<50ms") + ")";
+                    if (ip != null && !ip.trim().isEmpty()) {
+                        egressProbeStatus = "🟢 外网已通 · " + ip.trim()
+                                + " (" + (latency > 0 ? latency + "ms" : "延迟未知") + ")";
                     } else {
-                        egressProbeStatus = "🟢 外网已通 (" + (lat > 0 ? lat + "ms" : "<50ms") + ")";
+                        egressProbeStatus = "🟢 外网已通 (出口 IP 查询失败)";
                     }
                 } else {
-                    egressProbeStatus = "🔴 外网受阻";
+                    egressProbeStatus = "🔴 外网探测失败";
                 }
                 updateProtectionBadgeText();
                 LogManager.info("MainActivity", "外网出口探测: " + egressProbeStatus);
             });
-        }).start();
+        }, "WireOpen-EgressProbe").start();
     }
 
     private String lastErrorMessageDisplay = null;
@@ -1075,6 +1081,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String formatUptimeString() {
+        TrafficStatsManager stats = TrafficStatsManager.getInstance();
+        if (stats != null && stats.isSessionActive()) {
+            return stats.getSessionDurationFormatted();
+        }
         if (!isTimerRunning || connectionStartTime <= 0) return "00:00:00";
         long elapsed = (System.currentTimeMillis() - connectionStartTime) / 1000;
         long h = elapsed / 3600;
@@ -2039,6 +2049,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         profile.setRawConfig(normalizedConfig);
+        if (profile.getId().equals(repository.getActiveProfileId()) && isPortManuallyOverridden) {
+            isPortManuallyOverridden = false;
+            int configuredPort = 0;
+            if (profile.getProtocolType() == ProtocolType.WIREGUARD && profile.getWireGuardConfig() != null) {
+                configuredPort = profile.getWireGuardConfig().getEndpointPort();
+            } else if (profile.getProtocolType() == ProtocolType.OPENVPN && profile.getOpenVpnConfig() != null) {
+                configuredPort = profile.getOpenVpnConfig().getRemotePort();
+            }
+            if (configuredPort > 0) currentSelectedPort = configuredPort;
+            if (btnNodePortSelect != null) btnNodePortSelect.setText(currentSelectedPort + " ▾");
+        }
         repository.updateProfile(profile);
         refreshProfiles();
         renderNodeCards();
@@ -2101,6 +2122,14 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle("删除节点")
                 .setMessage("确定删除节点「" + profile.getName() + "」吗？\n删除后无法恢复。")
                 .setPositiveButton("删除", (d, which) -> {
+                    ProxyProfile running = UnifiedVpnService.getCurrentProfile();
+                    ConnectionState state = UnifiedVpnService.getCurrentState();
+                    if (running != null && item.getProfileId().equals(running.getId())
+                            && state != ConnectionState.DISCONNECTED) {
+                        Intent stopIntent = new Intent(this, UnifiedVpnService.class);
+                        stopIntent.setAction(UnifiedVpnService.ACTION_STOP_VPN);
+                        startService(stopIntent);
+                    }
                     repository.deleteProfile(item.getProfileId());
                     Toast.makeText(this, "已删除节点: " + profile.getName(), Toast.LENGTH_SHORT).show();
                     LogManager.log("MainActivity", "删除节点: " + profile.getName());
@@ -2133,8 +2162,13 @@ public class MainActivity extends AppCompatActivity {
             btnPing.setBackgroundResource(R.drawable.bg_latency_red);
             dotLatency.setBackgroundResource(R.drawable.bg_dot_red);
         } else {
-            String displayText = lat + "ms";
+            boolean genericUdp = "UDP".equalsIgnoreCase(item.getTransport())
+                    && item.getPort() != 53 && item.getPort() != 123;
+            String displayText = (genericUdp ? "~" : "") + lat + "ms";
             tvLatency.setText(displayText);
+            tvLatency.setContentDescription(genericUdp
+                    ? "主机响应延迟，不代表 UDP 服务端口可用"
+                    : "节点响应延迟");
             if (lat < 60) {
                 tvLatency.setTextColor(ContextCompat.getColor(this, R.color.status_green));
                 btnPing.setBackgroundResource(R.drawable.bg_latency_green);
@@ -2170,9 +2204,13 @@ public class MainActivity extends AppCompatActivity {
             public void onPortTested(PresetPortItem it, long latencyMs) {
                 scheduleLatencyUiUpdate(it);
                 runOnUiThread(() -> {
+                    boolean genericUdp = "UDP".equalsIgnoreCase(it.getTransport())
+                            && it.getPort() != 53 && it.getPort() != 123;
                     String message = latencyMs > 0
-                            ? it.getEffectiveChineseName() + " [:" + it.getPort() + "] 延迟: " + latencyMs + " ms"
-                            : it.getEffectiveChineseName() + " [:" + it.getPort() + "] 连接超时";
+                            ? it.getEffectiveChineseName() + " [:" + it.getPort() + "] "
+                                + (genericUdp ? "主机响应延迟（不代表 UDP 端口可用）: " : "节点响应延迟: ")
+                                + latencyMs + " ms"
+                            : it.getEffectiveChineseName() + " [:" + it.getPort() + "] 未收到有效响应";
                     Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
                 });
             }
@@ -2347,6 +2385,10 @@ public class MainActivity extends AppCompatActivity {
     private void setRoutingMode(String mode) {
         SplitTunnelManager.setRoutingMode(this, mode);
         updateRoutingModeUi(mode);
+        ConnectionState state = UnifiedVpnService.getCurrentState();
+        if (state == ConnectionState.CONNECTED || state == ConnectionState.CONNECTING) {
+            Toast.makeText(this, "分流规则已保存，断开并重新连接后生效", Toast.LENGTH_LONG).show();
+        }
         LogManager.log("MainActivity", "分流规则已更新为: " + mode);
     }
 
@@ -2914,7 +2956,13 @@ public class MainActivity extends AppCompatActivity {
             if (activePort != null && activePort.getLatencyMs() != null) {
                 long lat = activePort.getLatencyMs();
                 if (lat > 0) {
-                    tvMiniPingBadge.setText(lat + " ms");
+                    boolean genericUdp = activePort != null
+                            && "UDP".equalsIgnoreCase(activePort.getTransport())
+                            && activePort.getPort() != 53 && activePort.getPort() != 123;
+                    tvMiniPingBadge.setText((genericUdp ? "~" : "") + lat + " ms");
+                    if (genericUdp) {
+                        tvMiniPingBadge.setContentDescription("主机响应延迟，不代表 UDP 服务端口可用");
+                    }
                     if (lat < 60) {
                         tvMiniPingBadge.setTextColor(ContextCompat.getColor(this, R.color.status_green));
                     } else if (lat <= 150) {
@@ -2980,11 +3028,12 @@ public class MainActivity extends AppCompatActivity {
                 ProxyProfile curProfile = repository.getActiveProfile();
                 if (justConnected) {
                     resetTrafficSampling();
-                    if (curProfile != null) {
+                    TrafficStatsManager trafficStats = TrafficStatsManager.getInstance();
+                    if (curProfile != null && !trafficStats.isSessionActive()) {
                         String ep = curProfile.getEndpointDisplay();
                         String ch = getProtocolChannelDisplay(curProfile);
                         String tip = getVirtualTunDisplay(curProfile);
-                        TrafficStatsManager.getInstance().startSession(ep, ch, tip);
+                        trafficStats.startSession(ep, ch, tip);
                     }
                 }
 
@@ -2995,6 +3044,8 @@ public class MainActivity extends AppCompatActivity {
                 break;
 
             case CONNECTING:
+                // End the previous session on reconnect; CONNECTED will start the new one.
+                TrafficStatsManager.getInstance().stopSession();
                 btnOrbSwitch.setBackgroundResource(R.drawable.bg_orb_connecting);
                 orbRing.setBackgroundResource(R.drawable.bg_orb_ring_connecting);
                 tvOrbIcon.setText("⏳");

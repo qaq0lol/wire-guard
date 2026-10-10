@@ -62,6 +62,7 @@ public class TrafficStatsManager {
     // ─── Session lifecycle ───────────────────────────────────────────────────
 
     public synchronized void startSession(String endpoint, String protocol, String tunIp) {
+        if (sessionActive) return;
         flushPendingTraffic();
         this.sessionActive = true;
         this.sessionStartTime = System.currentTimeMillis();

@@ -26,6 +26,7 @@ public class OpenVpnConfig implements Serializable {
     private String clientCert = "";
     private String clientKey = "";
     private String tlsAuthKey = "";
+    private String tlsAuthTag = "tls-auth";
     private int tlsAuthDirection = -1;
 
     // Authentication flags
@@ -81,6 +82,16 @@ public class OpenVpnConfig implements Serializable {
 
     public String getTlsAuthKey() { return tlsAuthKey; }
     public void setTlsAuthKey(String tlsAuthKey) { this.tlsAuthKey = tlsAuthKey; }
+
+    public String getTlsAuthTag() { return tlsAuthTag; }
+    public void setTlsAuthTag(String tlsAuthTag) {
+        if (tlsAuthTag != null && (tlsAuthTag.equals("tls-auth")
+                || tlsAuthTag.equals("tls-crypt")
+                || tlsAuthTag.equals("tls-crypt-v2")
+                || tlsAuthTag.equals("secret"))) {
+            this.tlsAuthTag = tlsAuthTag;
+        }
+    }
 
     public int getTlsAuthDirection() { return tlsAuthDirection; }
     public void setTlsAuthDirection(int tlsAuthDirection) { this.tlsAuthDirection = tlsAuthDirection; }

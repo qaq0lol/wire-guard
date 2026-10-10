@@ -39,7 +39,7 @@
 ```text
 代理软件/
 ├── WireOpenProxy-debug.apk               # 自动打包构建的最新 Debug 安装包
-├── build.gradle.kts                      # 根工程构建脚本 (AGP 8.5+, Gradle 8.x)
+├── build.gradle.kts                      # 根工程构建脚本 (AGP 8.9.1, Gradle 8.11.1)
 ├── settings.gradle.kts                   # 仓库与模块配置
 ├── gradle.properties                     # JVM 与 AndroidX 配置
 ├── app/
@@ -75,7 +75,7 @@
 ./gradlew assembleDebug
 ```
 
-构建工作流会自动生成并上传 `WireOpenProxy-debug` APK。
+GitHub Actions 会在推送到 `main` 或 `fix/**` 分支及 Pull Request 时运行单元测试并构建 Debug APK。APK 以 Actions Artifact 形式上传，在对应的工作流运行页面下载。
 
 
 <!-- APK build workflow trigger -->

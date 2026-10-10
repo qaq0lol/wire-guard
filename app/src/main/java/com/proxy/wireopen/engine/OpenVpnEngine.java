@@ -309,7 +309,9 @@ public class OpenVpnEngine implements IVpnEngine, VpnStatus.StateListener, VpnSt
             }
 
             String transport = isTcpConfig(rawConfig) ? "TCP" : "UDP";
-            String friendlyErr = "OpenVPN " + transport + " 握手超时 (30秒内未收到远端响应，可能端口受限)";
+            long timeoutSeconds = timeoutMillis / 1000L;
+            String friendlyErr = "OpenVPN " + transport + " 连接超时 (" + timeoutSeconds
+                    + "秒内未收到连接成功状态，可能是端口受限、网络阻断或认证失败)";
             LogManager.error(TAG, "❌ " + friendlyErr + " - 节点: " + nodeName);
 
             EngineCallback callback = activeCallback;

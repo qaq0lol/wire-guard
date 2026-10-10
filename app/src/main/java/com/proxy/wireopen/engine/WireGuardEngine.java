@@ -36,6 +36,8 @@ public class WireGuardEngine implements IVpnEngine {
 
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private final AtomicBoolean disconnectedFired = new AtomicBoolean(false);
+    private final AtomicBoolean suppressDownCallback = new AtomicBoolean(false);
+    private final AtomicBoolean startInProgress = new AtomicBoolean(false);
     private final AtomicLong rxBytes = new AtomicLong(0);
     private final AtomicLong txBytes = new AtomicLong(0);
 
@@ -79,7 +81,8 @@ public class WireGuardEngine implements IVpnEngine {
                     stopStatsLoop();
                     backend = null;
                     tunnel = null;
-                    if (disconnectedFired.compareAndSet(false, true)) {
+                    if (!suppressDownCallback.get() && !startInProgress.get()
+                            && disconnectedFired.compareAndSet(false, true)) {
                         callback.onDisconnected();
                     }
                 }
@@ -87,14 +90,18 @@ public class WireGuardEngine implements IVpnEngine {
         };
 
         disconnectedFired.set(false);
+        suppressDownCallback.set(false);
         isRunning.set(true);
 
         final String epDisplay = profile.getEndpointDisplay();
+        startInProgress.set(true);
         try {
             Log.i(TAG, "Activating WireGuard tunnel with GoBackend: " + epDisplay);
             LogManager.info(TAG, "启动 WireGuard 隧道协商: " + epDisplay);
             backend.setState(tunnel, Tunnel.State.UP, wgConfig);
         } catch (Exception e) {
+            startInProgress.set(false);
+            suppressDownCallback.set(true);
             Log.e(TAG, "Failed to start WireGuard tunnel: " + e.getMessage(), e);
             String raw = (e.getMessage() != null) ? e.getMessage() : "";
             String errorDesc;
@@ -113,8 +120,11 @@ public class WireGuardEngine implements IVpnEngine {
             throw new Exception(errorDesc, e);
         }
 
-        // If GoBackend reported DOWN synchronously, do not resurrect a dead engine.
+        startInProgress.set(false);
+        // If GoBackend reported DOWN during launch, report one startup error rather
+        // than racing an onDisconnected callback against the service's onError path.
         if (!isRunning.get()) {
+            suppressDownCallback.set(true);
             cleanupBackend();
             throw new IllegalStateException("WireGuard 隧道启动后立即断开 (可能TUN接口被占用)");
         }
@@ -126,7 +136,8 @@ public class WireGuardEngine implements IVpnEngine {
 
     private void runStatsLoop(EngineCallback callback, String epDisplay) {
         long startMillis = System.currentTimeMillis();
-        boolean handshakeVerified = false;
+        boolean inboundTrafficObserved = false;
+        boolean noInboundWarningLogged = false;
 
         while (isRunning.get() && !Thread.currentThread().isInterrupted()) {
             try {
@@ -144,24 +155,18 @@ public class WireGuardEngine implements IVpnEngine {
                         txBytes.set(tx);
                         callback.onTrafficUpdate(rx, tx);
 
-                        if (!handshakeVerified) {
-                            if (rx > 0) {
-                                handshakeVerified = true;
-                                LogManager.info(TAG, "🎉 WireGuard 握手成功 (已建立双向通道，已接收 " + rx + " 字节响应数据)");
-                            } else {
-                                long elapsedSec = (System.currentTimeMillis() - startMillis) / 1000L;
-                                LogManager.debug(TAG, "等待远端握手响应 [" + elapsedSec + "s] (Tx已发: " + tx + "B, Rx接收: 0B)");
-
-                                // 15 秒超时检测：客户端持续发送握手包（Tx>0），但远端始终 0 回包 -> 典型 Noise_IK 静默丢包（密钥失效或未授权）
-                                if (elapsedSec >= 15 && tx > 0) {
-                                    String detail = "远端服务器未响应握手 (Tx=" + tx + "B, Rx=0B，可能私钥失效、IP未在服务端白名单或UDP端口被阻断)";
-                                    LogManager.error(TAG, "❌ " + detail + " - 节点: " + epDisplay);
-                                    if (isRunning.compareAndSet(true, false)) {
-                                        cleanupBackend();
-                                        callback.onError("远端握手无响应 (可能密钥失效或端口受限)");
-                                        break;
-                                    }
-                                }
+                        if (rx > 0 && !inboundTrafficObserved) {
+                            inboundTrafficObserved = true;
+                            LogManager.info(TAG, "WireGuard 已收到隧道流量响应（Rx=" + rx + "B）");
+                        }
+                        // The byte counters are not a definitive handshake signal. An idle
+                        // or one-way tunnel may legitimately have Rx=0, so don't tear down an
+                        // otherwise-UP tunnel based on that heuristic.
+                        if (!inboundTrafficObserved) {
+                            long elapsedSec = (System.currentTimeMillis() - startMillis) / 1000L;
+                            if (elapsedSec >= 15 && tx > 0 && !noInboundWarningLogged) {
+                                noInboundWarningLogged = true;
+                                LogManager.warn(TAG, "已发送隧道流量但尚未观察到接收流量；保持连接，不能仅凭 Rx=0 判定握手失败。节点: " + epDisplay);
                             }
                         }
                     }

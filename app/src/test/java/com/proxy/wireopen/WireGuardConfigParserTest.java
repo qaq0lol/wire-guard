@@ -14,6 +14,7 @@ public class WireGuardConfigParserTest {
         t.testUnbracketedIpv6WithPort();
         t.testSerializationRoundtrip();
         t.testInvalidConfigs();
+        t.testMultiplePeersRejected();
         t.testEdgeCases();
         t.testQuotedValuesAndBareIpv6();
         t.testMelbourneConfigAndWireGuardEngineConversion();
@@ -198,7 +199,44 @@ public class WireGuardConfigParserTest {
             // expected
         }
 
+        // Endpoint ports outside the valid range must be rejected.
+        String invalidPortConfig =
+                "[Interface]\nPrivateKey = YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=\n"
+                + "Address = 10.0.0.2/32\n[Peer]\n"
+                + "PublicKey = YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=\n"
+                + "Endpoint = vpn.example.com:70000\n";
+        try {
+            WireGuardConfigParser.parse(invalidPortConfig);
+            throw new AssertionError("Should reject endpoint port 70000");
+        } catch (WireGuardConfigParser.ParseException expected) {
+            // expected
+        }
+
         System.out.println("  ✓ testInvalidConfigs passed");
+    }
+
+    @Test
+    public void testMultiplePeersRejected() {
+        String config =
+                "[Interface]\n" +
+                "PrivateKey = YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=\n" +
+                "Address = 10.0.0.2/32\n\n" +
+                "[Peer]\n" +
+                "PublicKey = YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=\n" +
+                "Endpoint = one.example.com:51820\n" +
+                "AllowedIPs = 10.0.0.0/8\n\n" +
+                "[Peer]\n" +
+                "PublicKey = Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2M=\n" +
+                "Endpoint = two.example.com:51820\n" +
+                "AllowedIPs = 192.168.0.0/16\n";
+        try {
+            WireGuardConfigParser.parse(config);
+            throw new AssertionError("Multiple peers must be rejected until full Peer-list support exists");
+        } catch (WireGuardConfigParser.ParseException expected) {
+            if (!expected.getMessage().contains("多个 [Peer]")) {
+                throw new AssertionError("Unexpected parse error: " + expected.getMessage());
+            }
+        }
     }
 
     @Test

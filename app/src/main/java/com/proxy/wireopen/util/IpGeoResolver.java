@@ -179,14 +179,14 @@ public final class IpGeoResolver {
         Exception firstError = null;
         try {
             GeoInfo info = queryIpWho(ip);
-            return applyStrongHostnameHint(inputHost, info);
+            return info;
         } catch (Exception e) {
             firstError = e;
         }
 
         try {
             GeoInfo info = queryIpApi(ip);
-            return applyStrongHostnameHint(inputHost, info);
+            return info;
         } catch (Exception secondError) {
             if (firstError != null) {
                 secondError.addSuppressed(firstError);

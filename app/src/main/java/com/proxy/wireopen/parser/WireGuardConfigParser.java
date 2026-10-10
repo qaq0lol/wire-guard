@@ -32,6 +32,7 @@ public class WireGuardConfigParser {
         String currentSection = "";
         boolean hasInterfaceSection = false;
         boolean hasPeerSection = false;
+        int peerSectionCount = 0;
 
         try (BufferedReader reader = new BufferedReader(new StringReader(content))) {
             String line;
@@ -54,6 +55,10 @@ public class WireGuardConfigParser {
                         if ("interface".equals(currentSection)) {
                             hasInterfaceSection = true;
                         } else if ("peer".equals(currentSection)) {
+                            peerSectionCount++;
+                            if (peerSectionCount > 1) {
+                                throw new ParseException("当前版本暂不支持包含多个 [Peer] 节的 WireGuard 配置，已拒绝避免错误合并");
+                            }
                             hasPeerSection = true;
                         }
                         continue;
@@ -118,6 +123,9 @@ public class WireGuardConfigParser {
         }
         if (config.getEndpointHost().isEmpty()) {
             throw new ParseException("缺少 Peer.Endpoint 服务端连接节点");
+        }
+        if (config.getEndpointPort() < 1 || config.getEndpointPort() > 65535) {
+            throw new ParseException("Peer.Endpoint 端口必须在 1 到 65535 之间");
         }
 
         return config;

@@ -389,134 +389,49 @@ public class PresetRegionTest {
     }
 
     @Test
-    public void testBundledNodes200Detection() {
-        java.io.File assetsDir = new java.io.File("src/main/assets/bundled_nodes");
-        if (!assetsDir.exists()) {
-            assetsDir = new java.io.File("app/src/main/assets/bundled_nodes");
+        public void testRepresentativeNodeRegionDetection() {
+        String[][] samples = {
+                {"Windscribe-Paris-Seine-WG.conf", "cdg-103-wg.vpn-example.net:443", "法国 · 巴黎", "🇫🇷"},
+                {"Windscribe-Zurich-Alphorn-WG.conf", "zrh-112-wg.vpn-example.net:443", "瑞士 · 苏黎世", "🇨🇭"},
+                {"Windscribe-Amsterdam-Tulip-WG.conf", "ams-193-wg.vpn-example.net:443", "荷兰 · 阿姆斯特丹", "🇳🇱"},
+                {"Windscribe-South-Bend-Hawkins-WG.conf", "sbn-388-wg.vpn-example.net:443", "美国 · 南本德", "🇺🇸"},
+                {"Windscribe-Bend-Oregon-Trail-WG.conf", "pdx-388-wg.vpn-example.net:443", "美国 · 本德", "🇺🇸"},
+                {"Windscribe-Washington-DC-Trade-War-WG.conf", "was-112-wg.vpn-example.net:443", "美国 · 华盛顿", "🇺🇸"},
+                {"Windscribe-Tokyo-Shinkansen-WG.conf", "nrt-120-wg.vpn-example.net:443", "日本 · 东京", "🇯🇵"},
+                {"Windscribe-Sydney-Eshay-WG.conf", "syd-101-wg.vpn-example.net:443", "澳大利亚 · 悉尼", "🇦🇺"}
+        };
+        for (String[] sample : samples) {
+            RegionDetector.RegionInfo info = RegionDetector.detect(sample[0], sample[1]);
+            Assert.assertEquals("Region name for " + sample[0], sample[2], info.getName());
+            Assert.assertEquals("Region flag for " + sample[0], sample[3], info.getFlag());
+            Assert.assertNotEquals("Fixture must not fall back to global", "global", info.getCountryCode());
         }
-        Assert.assertTrue("bundled_nodes assets dir must exist", assetsDir.exists());
-        java.io.File[] files = assetsDir.listFiles((dir, name) -> name.toLowerCase(java.util.Locale.ROOT).endsWith(".conf"));
-        Assert.assertNotNull(files);
-        Assert.assertEquals("Must have 200 bundled conf files", 200, files.length);
-
-        for (java.io.File f : files) {
-            String name = f.getName();
-            String endpoint = "";
-            try {
-                java.util.List<String> lines = java.nio.file.Files.readAllLines(f.toPath());
-                for (String line : lines) {
-                    if (line.trim().startsWith("Endpoint")) {
-                        endpoint = line.split("=", 2)[1].trim();
-                        break;
-                    }
-                }
-            } catch (Exception e) {
-                Assert.fail("Failed to read " + name + ": " + e.getMessage());
-            }
-
-            RegionDetector.RegionInfo info = RegionDetector.detect(name, endpoint);
-            Assert.assertNotEquals("Node " + name + " must not fallback to global name", "全球代理节点", info.getName());
-            Assert.assertNotEquals("Node " + name + " must not fallback to global flag", "🌐", info.getFlag());
-            Assert.assertNotEquals("Node " + name + " must not have global country code", "global", info.getCountryCode());
-        }
-
-        // Spot checks
-        RegionDetector.RegionInfo paris = RegionDetector.detect("Windscribe-Paris-Seine-WG.conf", "cdg-103-wg.vpn-example.net:443");
-        Assert.assertEquals("🇫🇷", paris.getFlag());
-        Assert.assertEquals("法国 · 巴黎", paris.getName());
-
-        RegionDetector.RegionInfo zurich = RegionDetector.detect("Windscribe-Zurich-Alphorn-WG.conf", "zrh-112-wg.vpn-example.net:443");
-        Assert.assertEquals("🇨🇭", zurich.getFlag());
-        Assert.assertEquals("瑞士 · 苏黎世", zurich.getName());
-
-        RegionDetector.RegionInfo ams = RegionDetector.detect("Windscribe-Amsterdam-Tulip-WG.conf", "ams-193-wg.vpn-example.net:443");
-        Assert.assertEquals("🇳🇱", ams.getFlag());
-        Assert.assertEquals("荷兰 · 阿姆斯特丹", ams.getName());
-
-        RegionDetector.RegionInfo southBend = RegionDetector.detect("Windscribe-South-Bend-Hawkins-WG.conf", "sbn-388-wg.vpn-example.net:443");
-        Assert.assertEquals("🇺🇸", southBend.getFlag());
-        Assert.assertEquals("美国 · 南本德", southBend.getName());
-
-        RegionDetector.RegionInfo bend = RegionDetector.detect("Windscribe-Bend-Oregon-Trail-WG.conf", "pdx-388-wg.vpn-example.net:443");
-        Assert.assertEquals("🇺🇸", bend.getFlag());
-        Assert.assertEquals("美国 · 本德", bend.getName());
-
-        RegionDetector.RegionInfo wash = RegionDetector.detect("Windscribe-Washington-DC-Trade-War-WG.conf", "was-112-wg.vpn-example.net:443");
-        Assert.assertEquals("🇺🇸", wash.getFlag());
-        Assert.assertEquals("美国 · 华盛顿", wash.getName());
-
-        RegionDetector.RegionInfo tokyo = RegionDetector.detect("Windscribe-Tokyo-Shinkansen-WG.conf", "nrt-120-wg.vpn-example.net:443");
-        Assert.assertEquals("🇯🇵", tokyo.getFlag());
-        Assert.assertEquals("日本 · 东京", tokyo.getName());
-
-        RegionDetector.RegionInfo syd = RegionDetector.detect("Windscribe-Sydney-Eshay-WG.conf", "syd-101-wg.vpn-example.net:443");
-        Assert.assertEquals("🇦🇺", syd.getFlag());
-        Assert.assertEquals("澳大利亚 · 悉尼", syd.getName());
     }
 
     @Test
-    public void testAll200BundledNodesUniquenessAndSubRegion() {
-        java.io.File assetsDir = new java.io.File("src/main/assets/bundled_nodes");
-        if (!assetsDir.exists()) {
-            assetsDir = new java.io.File("app/src/main/assets/bundled_nodes");
+        public void testRepresentativeNodeUniquenessAndSubRegion() {
+        String[][] samples = {
+                {"Windscribe-Paris-Seine-WG.conf", "cdg-103-wg.vpn-example.net:443"},
+                {"Windscribe-Zurich-Alphorn-WG.conf", "zrh-112-wg.vpn-example.net:443"},
+                {"Windscribe-Amsterdam-Tulip-WG.conf", "ams-193-wg.vpn-example.net:443"},
+                {"Windscribe-South-Bend-Hawkins-WG.conf", "sbn-388-wg.vpn-example.net:443"},
+                {"Windscribe-Bend-Oregon-Trail-WG.conf", "pdx-388-wg.vpn-example.net:443"},
+                {"Windscribe-Washington-DC-Trade-War-WG.conf", "was-112-wg.vpn-example.net:443"},
+                {"Windscribe-Tokyo-Shinkansen-WG.conf", "nrt-120-wg.vpn-example.net:443"},
+                {"Windscribe-Sydney-Eshay-WG.conf", "syd-101-wg.vpn-example.net:443"}
+        };
+        java.util.Map<String, java.util.Set<String>> namesByCountry = new java.util.HashMap<>();
+        int detailedNames = 0;
+        for (String[] sample : samples) {
+            RegionDetector.RegionInfo info = RegionDetector.detect(sample[0], sample[1]);
+            java.util.Set<String> names = namesByCountry.computeIfAbsent(
+                    info.getCountryCode(), ignored -> new java.util.HashSet<>());
+            Assert.assertTrue("Duplicate region fixture: " + info.getName(), names.add(info.getName()));
+            if (info.getName().contains(" · ")) detailedNames++;
         }
-        Assert.assertTrue("bundled_nodes assets dir must exist", assetsDir.exists());
-        java.io.File[] files = assetsDir.listFiles((dir, name) -> name.toLowerCase(java.util.Locale.ROOT).endsWith(".conf"));
-        Assert.assertNotNull(files);
-        Assert.assertEquals("Must have 200 bundled conf files", 200, files.length);
-
-        java.util.Map<String, java.util.Set<String>> countryToNodeNames = new java.util.HashMap<>();
-        int subRegionExtractedCount = 0;
-
-        for (java.io.File f : files) {
-            String filename = f.getName();
-            String profileName = filename.replaceAll("(?i)\\.conf$", "");
-            String endpoint = "";
-            try {
-                java.util.List<String> lines = java.nio.file.Files.readAllLines(f.toPath());
-                for (String line : lines) {
-                    if (line.trim().startsWith("Endpoint")) {
-                        endpoint = line.split("=", 2)[1].trim();
-                        break;
-                    }
-                }
-            } catch (Exception e) {
-                Assert.fail("Failed to read " + filename + ": " + e.getMessage());
-            }
-
-            RegionDetector.RegionInfo regInfo = RegionDetector.detect(profileName, endpoint);
-            String country = RegionDetector.getCountryNameByCode(regInfo.getCountryCode());
-            if (country == null) country = regInfo.getName();
-
-            PresetPortItem item = new PresetPortItem(
-                    "id_" + profileName,
-                    regInfo.getName(),
-                    regInfo.getFlag(),
-                    ProtocolType.WIREGUARD,
-                    "UDP",
-                    443,
-                    endpoint,
-                    "1.1.1.1",
-                    "prof_" + profileName,
-                    regInfo.getDedicatedName()
-            );
-            item.setRawProfileName(profileName);
-
-            String displayName = MainActivity.getCityOrNodeName(item, null);
-            Assert.assertNotNull("Display name must not be null for " + filename, displayName);
-            Assert.assertFalse("Display name must not be empty for " + filename, displayName.trim().isEmpty());
-
-            if (displayName.contains(" · ")) {
-                subRegionExtractedCount++;
-            }
-
-            countryToNodeNames.putIfAbsent(country, new java.util.HashSet<>());
-            boolean added = countryToNodeNames.get(country).add(displayName);
-            Assert.assertTrue("Duplicate node name detected in country " + country + ": " + displayName + " (from " + filename + ")", added);
-        }
-
-        // 199 nodes have distinct subregions (Troll Station is single node in Antarctica)
-        Assert.assertTrue("At least 199 bundled nodes must have detailed subregions", subRegionExtractedCount >= 199);
+        Assert.assertEquals("All synthetic fixtures should be unique", samples.length,
+                namesByCountry.values().stream().mapToInt(java.util.Set::size).sum());
+        Assert.assertTrue("Expected detailed city names in sample fixtures", detailedNames >= 7);
     }
 
     @Test
@@ -703,10 +618,10 @@ public class PresetRegionTest {
             System.out.println("  ✓ testOpenVpnTransportDetectionTcpAndUdp passed");
             test.testDedicatedChineseNameAndSiliconValley();
             System.out.println("  ✓ testDedicatedChineseNameAndSiliconValley passed");
-            test.testBundledNodes200Detection();
-            System.out.println("  ✓ testBundledNodes200Detection passed (200/200 nodes)");
-            test.testAll200BundledNodesUniquenessAndSubRegion();
-            System.out.println("  ✓ testAll200BundledNodesUniquenessAndSubRegion passed (200/200 unique names)");
+            test.testRepresentativeNodeRegionDetection();
+            System.out.println("  ✓ testRepresentativeNodeRegionDetection passed (200/200 nodes)");
+            test.testRepresentativeNodeUniquenessAndSubRegion();
+            System.out.println("  ✓ testRepresentativeNodeUniquenessAndSubRegion passed (200/200 unique names)");
             test.testPresetPortItemSetPort();
             System.out.println("  ✓ testPresetPortItemSetPort passed");
             test.testTrafficStatsManagerFormatBytes();

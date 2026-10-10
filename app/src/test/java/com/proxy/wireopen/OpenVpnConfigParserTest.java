@@ -2,6 +2,7 @@ package com.proxy.wireopen;
 
 import com.proxy.wireopen.model.OpenVpnConfig;
 import com.proxy.wireopen.parser.OpenVpnConfigParser;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class OpenVpnConfigParserTest {
@@ -11,6 +12,7 @@ public class OpenVpnConfigParserTest {
         OpenVpnConfigParserTest t = new OpenVpnConfigParserTest();
         t.testValidOpenVpnConfig();
         t.testInlineCertificates();
+        t.testTlsCryptSerializationPreservesTag();
         t.testSerializationRoundtrip();
         t.testInvalidConfigs();
         t.testEdgeCases();
@@ -125,6 +127,26 @@ public class OpenVpnConfigParserTest {
             System.out.println("  ✓ testInlineCertificates passed");
         } catch (Exception e) {
             throw new RuntimeException("testInlineCertificates failed", e);
+        }
+    }
+
+    @Test
+    public void testTlsCryptSerializationPreservesTag() {
+        String config = "client\n"
+                + "dev tun\n"
+                + "proto udp\n"
+                + "remote vpn.example.test 1194\n"
+                + "<tls-crypt>\n"
+                + "FAKE_TEST_KEY_DATA\n"
+                + "</tls-crypt>\n";
+        try {
+            OpenVpnConfig parsed = OpenVpnConfigParser.parse(config);
+            String serialized = OpenVpnConfigParser.serialize(parsed);
+            Assert.assertTrue("tls-crypt tag should be preserved", serialized.contains("<tls-crypt>"));
+            Assert.assertTrue("tls-crypt closing tag should be preserved", serialized.contains("</tls-crypt>"));
+            Assert.assertFalse("tls-crypt must not be rewritten as tls-auth", serialized.contains("<tls-auth>"));
+        } catch (Exception e) {
+            throw new RuntimeException("testTlsCryptSerializationPreservesTag failed", e);
         }
     }
 
