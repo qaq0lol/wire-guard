@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Blue Base -->
+    <path android:fillColor="#0D5EAF" android:pathData="M0,0h640v480h-640z" />
+    <!-- White Stripes (4 stripes) -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,53h640v53h-640z M0,160h640v53h-640z M0,267h640v53h-640z M0,373h640v53h-640z" />
+    <!-- Blue Canton -->
+    <path android:fillColor="#0D5EAF" android:pathData="M0,0h267v267h-267z" />
+    <!-- White Cross in Canton -->
+    <path android:fillColor="#FFFFFF" android:pathData="M107,0h53v267h-53z M0,107h267v53h-267z" />
+</vector>

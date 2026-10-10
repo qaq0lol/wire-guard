@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Base -->
+    <path android:fillColor="#CC0000" android:pathData="M0,0h640v480h-640z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M0,34h640v34h-640z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M0,102h640v34h-640z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M0,171h640v34h-640z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M0,239h640v34h-640z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M0,308h640v34h-640z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M0,377h640v34h-640z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M0,445h640v34h-640z" />
+    <!-- Blue Canton -->
+    <path android:fillColor="#010066" android:pathData="M0,0h320v274h-320z" />
+    <!-- Crescent Moon Base (cx=115, cy=137, r=70) -->
+    <path android:fillColor="#FFCC00" android:pathData="M115,67a70,70 0 1,0 0.1,0z" />
+    <!-- Crescent Moon Cutout (cx=135, cy=137, r=60) -->
+    <path android:fillColor="#010066" android:pathData="M135,77a60,60 0 1,0 0.1,0z" />
+    <!-- 14-Point Star -->
+    <path android:fillColor="#FFCC00" android:pathData="M205.0,85.0L209.9,115.6L227.6,90.1L218.7,119.8L245.7,104.6L224.8,127.5L255.7,125.4L227.0,137.0L255.7,148.6L224.8,146.5L245.7,169.4L218.7,154.2L227.6,183.9L209.9,158.4L205.0,189.0L200.1,158.4L182.4,183.9L191.3,154.2L164.3,169.4L185.2,146.5L154.3,148.6L183.0,137.0L154.3,125.4L185.2,127.5L164.3,104.6L191.3,119.8L182.4,90.1L200.1,115.6Z" />
+</vector>

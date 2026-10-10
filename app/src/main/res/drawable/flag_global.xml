@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Deep Indigo Field -->
+    <path
+        android:fillColor="#4338CA"
+        android:pathData="M0,0h640v480h-640z" />
+    <!-- Outer Globe Circle -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="16"
+        android:pathData="M320,100a140,140 0 1,0 0.1,0z" />
+    <!-- Inner Longitude Arc (Center Ellipse) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="12"
+        android:pathData="M320,100c-70,0 -70,280 0,280c70,0 70,-280 0,-280z" />
+    <!-- Equator Line -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="14"
+        android:pathData="M180,240h280" />
+    <!-- Upper and Lower Latitude Lines -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="10"
+        android:pathData="M210,170h220M210,310h220" />
+</vector>

@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Green Left -->
+    <path android:fillColor="#006847" android:pathData="M0,0h213v480h-213z" />
+    <!-- White Center -->
+    <path android:fillColor="#FFFFFF" android:pathData="M213,0h214v480h-214z" />
+    <!-- Red Right -->
+    <path android:fillColor="#CE1126" android:pathData="M427,0h213v480h-213z" />
+    <!-- Mexican Coat of Arms (Eagle on Cactus) -->
+    <path android:fillColor="#2E7D32" android:pathData="M290,265 C320,250 320,280 350,265 L340,290 C320,295 310,290 290,290 Z" />
+    <path android:fillColor="#5D4037" android:pathData="M315,190 C335,200 340,230 330,260 L310,260 C305,235 305,210 315,190 Z" />
+    <path android:strokeColor="#1B5E20" android:strokeWidth="8" android:pathData="M270,270 C280,310 360,310 370,270" />
+</vector>

@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Light Blue Top -->
+    <path android:fillColor="#74ACDF" android:pathData="M0,0h640v160h-640z" />
+    <!-- White Middle -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,160h640v160h-640z" />
+    <!-- Light Blue Bottom -->
+    <path android:fillColor="#74ACDF" android:pathData="M0,320h640v160h-640z" />
+    <!-- Sun of May Disc -->
+    <path android:fillColor="#F6B40E" android:pathData="M320,206a34,34 0 1,0 0.1,0z" />
+    <!-- Sun of May Rays -->
+    <path android:strokeColor="#F6B40E" android:strokeWidth="5" android:pathData="M320,185v30 M320,265v30 M265,240h30 M345,240h30 M281,201l21,21 M338,258l21,21 M359,201l-21,21 M260,300l21,-21 M300,188l10,24 M340,188l-10,24 M300,292l10,-24 M340,292l-10,-24 M268,220l24,10 M268,260l24,-10 M372,220l-24,10 M372,260l-24,-10" />
+</vector>

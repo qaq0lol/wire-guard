@@ -1,0 +1,54 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Deep Navy Background -->
+    <path
+        android:fillColor="#00008B"
+        android:pathData="M0,0h640v480h-640z" />
+    <!-- Canton Background (Union Jack Field) -->
+    <path
+        android:fillColor="#00247D"
+        android:pathData="M0,0h320v240h-320z" />
+    <!-- White Diagonal Cross (St Andrew & St Patrick) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="40"
+        android:pathData="M0,0L320,240M320,0L0,240" />
+    <!-- Red Diagonal Cross (St Patrick) -->
+    <path
+        android:strokeColor="#CF142B"
+        android:strokeWidth="24"
+        android:pathData="M0,0L320,240M320,0L0,240" />
+    <!-- White Straight Cross (St George) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="60"
+        android:pathData="M160,0v240M0,120h320" />
+    <!-- Red Straight Cross (St George) -->
+    <path
+        android:strokeColor="#CF142B"
+        android:strokeWidth="36"
+        android:pathData="M160,0v240M0,120h320" />
+    <!-- Commonwealth Star (cx=160, cy=360, r=36) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M160,324a36,36 0 1,0 0.1,0z" />
+    <!-- Southern Cross Stars -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M480,96a14,14 0 1,0 0.1,0z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M420,206a14,14 0 1,0 0.1,0z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M530,196a14,14 0 1,0 0.1,0z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M480,332a18,18 0 1,0 0.1,0z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M505,256a9,9 0 1,0 0.1,0z" />
+</vector>

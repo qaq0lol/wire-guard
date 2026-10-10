@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Field -->
+    <path android:fillColor="#D20000" android:pathData="M0,0h640v480h-640z" />
+    <!-- 4 Diagonal Rays -->
+    <path android:fillColor="#FFE600" android:pathData="M0,0 L100,0 L320,240 Z M640,0 L540,0 L320,240 Z M640,480 L540,480 L320,240 Z M0,480 L100,480 L320,240 Z" />
+    <!-- 4 Orthogonal Rays -->
+    <path android:fillColor="#FFE600" android:pathData="M280,0 L360,0 L320,240 Z M280,480 L360,480 L320,240 Z M0,200 L0,280 L320,240 Z M640,200 L640,280 L320,240 Z" />
+    <!-- Sun Disc with Red Separation Ring -->
+    <path android:fillColor="#FFE600" android:pathData="M320,175a65,65 0 1,0 0.1,0z" />
+    <path android:strokeColor="#D20000" android:strokeWidth="10" android:fillColor="#FFE600" android:pathData="M320,190a50,50 0 1,0 0.1,0z" />
+</vector>

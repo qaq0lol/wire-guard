@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Green Top -->
+    <path android:fillColor="#00732F" android:pathData="M160,0h480v160h-480z" />
+    <!-- White Middle -->
+    <path android:fillColor="#FFFFFF" android:pathData="M160,160h480v160h-480z" />
+    <!-- Black Bottom -->
+    <path android:fillColor="#000000" android:pathData="M160,320h480v160h-480z" />
+    <!-- Red Hoist Band -->
+    <path android:fillColor="#FF0000" android:pathData="M0,0h160v480h-160z" />
+</vector>

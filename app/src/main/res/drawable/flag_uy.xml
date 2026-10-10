@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- White Field -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,0h640v480h-640z" />
+    <path android:fillColor="#0038A8" android:pathData="M0,53h640v53h-640z" />
+    <path android:fillColor="#0038A8" android:pathData="M0,159h640v53h-640z" />
+    <path android:fillColor="#0038A8" android:pathData="M0,266h640v53h-640z" />
+    <path android:fillColor="#0038A8" android:pathData="M0,373h640v53h-640z" />
+    <!-- White Canton -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,0h240v267h-240z" />
+    <!-- Golden Sun of May in Canton -->
+    <path android:fillColor="#FCD116" android:pathData="M120,98a35,35 0 1,0 0.1,0z" />
+    <path android:strokeColor="#FCD116" android:strokeWidth="5" android:pathData="M120,78v20 M120,168v20 M65,133h20 M155,133h20 M81,94l14,14 M145,158l14,14 M159,94l-14,14 M81,172l14,-14" />
+</vector>

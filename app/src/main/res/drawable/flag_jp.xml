@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- White Field -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M0,0h640v480h-640z" />
+    <!-- Crimson Red Disc (cx=320, cy=240, r=144) -->
+    <path
+        android:fillColor="#BC002D"
+        android:pathData="M320,96a144,144 0 1,0 0.1,0z" />
+</vector>

@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Field -->
+    <path android:fillColor="#E41E20" android:pathData="M0,0h640v480h-640z" />
+    <!-- Double-Headed Eagle Silhouette -->
+    <path android:fillColor="#000000" android:pathData="M320,120 L335,140 L360,130 L350,155 L385,150 L410,180 L445,190 L425,220 L460,240 L430,265 L445,290 L410,290 L390,320 L370,305 L355,350 L340,335 L335,390 L320,380 L305,390 L300,335 L285,350 L270,305 L250,320 L230,290 L195,290 L210,265 L180,240 L215,220 L195,190 L230,180 L255,150 L290,155 L280,130 L305,140 Z" />
+    <!-- Eagle Wings Detail -->
+    <path android:fillColor="#000000" android:pathData="M320,170 L340,195 L370,185 L355,215 L385,225 L350,245 L320,230 L290,245 L255,225 L285,215 L270,185 L300,195 Z" />
+</vector>

@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Yellow Top (1/2) -->
+    <path android:fillColor="#FFDD00" android:pathData="M0,0h640v240h-640z" />
+    <!-- Blue Middle (1/4) -->
+    <path android:fillColor="#034EA2" android:pathData="M0,240h640v120h-640z" />
+    <!-- Red Bottom (1/4) -->
+    <path android:fillColor="#ED1C24" android:pathData="M0,360h640v120h-640z" />
+    <!-- Center Shield & Condor -->
+    <path android:fillColor="#A56E24" android:pathData="M320,180 L350,165 L360,180 L340,195 L355,230 L320,285 L285,230 L300,195 L280,180 L290,165 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M305,210h30v40h-30z" />
+    <path android:fillColor="#034EA2" android:pathData="M305,230h30v20h-30z" />
+</vector>

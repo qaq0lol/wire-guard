@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Green Field -->
+    <path android:fillColor="#009C3B" android:pathData="M0,0h640v480h-640z" />
+    <!-- Yellow Rhombus -->
+    <path android:fillColor="#FFDF00" android:pathData="M320,40 L580,240 L320,440 L60,240 Z" />
+    <!-- Blue Circle -->
+    <path android:fillColor="#002776" android:pathData="M320,135a105,105 0 1,0 0.1,0z" />
+    <!-- White Arc Band -->
+    <path android:fillColor="#FFFFFF" android:pathData="M217,250 C250,210 370,205 423,248 C375,220 255,225 217,250 Z" />
+    <!-- Southern Cross Stars -->
+    <path android:fillColor="#FFFFFF" android:pathData="M320.0,269.0L321.3,273.1L325.7,273.1L322.2,275.7L323.5,279.9L320.0,277.3L316.5,279.9L317.8,275.7L314.3,273.1L318.7,273.1Z M310.0,290.0L311.1,293.5L314.8,293.5L311.8,295.6L312.9,299.0L310.0,296.9L307.1,299.0L308.2,295.6L305.2,293.5L308.9,293.5Z M330.0,285.0L331.1,288.5L334.8,288.5L331.8,290.6L332.9,294.0L330.0,291.9L327.1,294.0L328.2,290.6L325.2,288.5L328.9,288.5Z M320.0,304.0L321.3,308.1L325.7,308.1L322.2,310.7L323.5,314.9L320.0,312.3L316.5,314.9L317.8,310.7L314.3,308.1L318.7,308.1Z M335.0,301.0L335.9,303.8L338.8,303.8L336.5,305.5L337.4,308.2L335.0,306.5L332.6,308.2L333.5,305.5L331.2,303.8L334.1,303.8Z" />
+</vector>

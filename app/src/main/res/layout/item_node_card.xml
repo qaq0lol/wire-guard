@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_node"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="7dp"
+    android:paddingBottom="7dp"
+    android:layout_marginBottom="5dp"
+    android:background="@drawable/bg_node_card_inactive"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Flag Frame -->
+    <FrameLayout
+        android:layout_width="36dp"
+        android:layout_height="25dp"
+        android:background="@drawable/bg_flag_frame"
+        android:padding="1dp"
+        android:clipToOutline="true">
+
+        <ImageView
+            android:id="@+id/iv_node_flag"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/flag_global"
+            android:contentDescription="国旗" />
+    </FrameLayout>
+
+    <!-- Node Info: Single-line compact layout -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="9dp"
+        android:layout_marginEnd="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tv_node_chinese_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="东京"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/tv_node_proto_port"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="7dp"
+            android:background="@drawable/badge_rounded_bg"
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp"
+            android:paddingTop="1dp"
+            android:paddingBottom="1dp"
+            android:text="WG · 443"
+            android:textColor="@color/brand_primary"
+            android:textSize="9sp"
+            android:fontFamily="monospace"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_node_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/badge_rounded_bg"
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp"
+            android:paddingTop="1dp"
+            android:paddingBottom="1dp"
+            android:text="当前"
+            android:textColor="@color/brand_primary"
+            android:textSize="9sp"
+            android:fontFamily="monospace"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Favorite Star Button -->
+    <TextView
+        android:id="@+id/btn_node_favorite"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp"
+        android:layout_marginEnd="6dp"
+        android:text="☆"
+        android:textSize="15sp"
+        android:textColor="@color/text_muted"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- Latency Capsule -->
+    <LinearLayout
+        android:id="@+id/btn_node_ping"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_latency_green"
+        android:paddingStart="7dp"
+        android:paddingEnd="7dp"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:clickable="true"
+        android:focusable="true">
+
+        <View
+            android:id="@+id/dot_node_latency"
+            android:layout_width="6dp"
+            android:layout_height="6dp"
+            android:background="@drawable/bg_dot_green" />
+
+        <TextView
+            android:id="@+id/tv_node_latency"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="28ms"
+            android:textColor="@color/status_green"
+            android:fontFamily="monospace"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_node_refresh_symbol"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:text="⟳"
+            android:textColor="@color/text_muted"
+            android:textSize="9sp" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- White Field -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M0,0h640v480h-640z" />
+    <!-- Red Top Semi Taegeuk -->
+    <path
+        android:fillColor="#CD2E3A"
+        android:pathData="M320,160a80,80 0 0,1 0,160 80,80 0 0,0 0,-160z" />
+    <!-- Blue Bottom Semi Taegeuk -->
+    <path
+        android:fillColor="#0047A0"
+        android:pathData="M320,240a80,80 0 0,1 0,160 80,80 0 0,0 0,-160z" />
+    <!-- Base Taegeuk S-curve -->
+    <path
+        android:fillColor="#CD2E3A"
+        android:pathData="M320,160a80,80 0 0,0 0,80 80,80 0 0,1 0,80 80,80 0 0,1 -80,-80 80,80 0 0,1 80,-80z" />
+    <path
+        android:fillColor="#0047A0"
+        android:pathData="M320,240a80,80 0 0,0 0,80 80,80 0 0,1 0,0 80,80 0 0,0 80,-80 80,80 0 0,0 -80,-80z" />
+</vector>

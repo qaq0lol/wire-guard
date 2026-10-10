@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Field -->
+    <path android:fillColor="#DA251D" android:pathData="M0,0h640v480h-640z" />
+    <!-- Yellow Five-Pointed Star -->
+    <path android:fillColor="#FFFF00" android:pathData="M320.0,110.0L349.4,199.5L443.6,199.8L367.6,255.5L396.4,345.2L320.0,290.0L243.6,345.2L272.4,255.5L196.4,199.8L290.6,199.5Z" />
+</vector>

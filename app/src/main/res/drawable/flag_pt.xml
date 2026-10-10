@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Green Hoist (2/5) -->
+    <path android:fillColor="#006600" android:pathData="M0,0h256v480h-256z" />
+    <!-- Red Fly (3/5) -->
+    <path android:fillColor="#FF0000" android:pathData="M256,0h384v480h-384z" />
+    <!-- Yellow Armillary Sphere -->
+    <path android:strokeColor="#FFCC00" android:strokeWidth="10" android:fillColor="#00000000" android:pathData="M256,165a75,75 0 1,0 0.1,0z" />
+    <path android:strokeColor="#FFCC00" android:strokeWidth="6" android:pathData="M256,165v150 M181,240h150 M203,187l106,106" />
+    <!-- Portuguese Shield -->
+    <path android:fillColor="#FFFFFF" android:pathData="M231,205h50v50c0,20 -25,32 -25,32c0,0 -25,-12 -25,-32z" />
+    <path android:strokeColor="#FF0000" android:strokeWidth="8" android:pathData="M231,205h50v50c0,20 -25,32 -25,32c0,0 -25,-12 -25,-32z" />
+    <!-- Blue Quinas -->
+    <path android:fillColor="#0038A8" android:pathData="M256,224a6,6 0 1,0 0.1,0z M246,239a6,6 0 1,0 0.1,0z M266,239a6,6 0 1,0 0.1,0z" />
+</vector>

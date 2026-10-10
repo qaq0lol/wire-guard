@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Top Red Band -->
+    <path
+        android:fillColor="#EE2536"
+        android:pathData="M0,0h640v240h-640z" />
+    <!-- Bottom White Band -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M0,240h640v240h-640z" />
+    <!-- White Crescent (Base Circle cx=130, cy=120, r=65) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M130,55a65,65 0 1,0 0.1,0z" />
+    <!-- Red Crescent Inner Mask (Circle cx=150, cy=120, r=60) -->
+    <path
+        android:fillColor="#EE2536"
+        android:pathData="M150,60a60,60 0 1,0 0.1,0z" />
+    <!-- 5 White Stars in Canton -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M160,76a9,9 0 1,0 0.1,0z
+                          M190,96a9,9 0 1,0 0.1,0z
+                          M180,131a9,9 0 1,0 0.1,0z
+                          M145,136a9,9 0 1,0 0.1,0z
+                          M140,101a9,9 0 1,0 0.1,0z" />
+</vector>

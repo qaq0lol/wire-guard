@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Chili Red Top -->
+    <path android:fillColor="#E03C31" android:pathData="M0,0h640v240h-640z" />
+    <!-- Blue Bottom -->
+    <path android:fillColor="#001489" android:pathData="M0,240h640v240h-640z" />
+    <!-- White Y Pall Base -->
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="150" android:pathData="M0,0 L240,240 H640 M0,480 L240,240" />
+    <!-- Green Y Pall -->
+    <path android:strokeColor="#007749" android:strokeWidth="90" android:pathData="M0,0 L240,240 H640 M0,480 L240,240" />
+    <!-- Black Triangle at Hoist -->
+    <path android:fillColor="#000000" android:pathData="M0,75 L165,240 L0,405 Z" />
+    <!-- Yellow Triangle Border -->
+    <path android:strokeColor="#FFB81C" android:strokeWidth="24" android:pathData="M0,75 L165,240 L0,405" />
+</vector>

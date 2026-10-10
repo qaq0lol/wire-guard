@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Background -->
+    <path
+        android:fillColor="#DE2110"
+        android:pathData="M0,0h640v480h-640z" />
+    <!-- Bauhinia Flower 5 Petals -->
+    <group
+        android:translateX="320"
+        android:translateY="240">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M0,-88a28,28 0 1,0 0.1,0z
+                              M57,-46a28,28 0 1,0 0.1,0z
+                              M35,20a28,28 0 1,0 0.1,0z
+                              M-35,20a28,28 0 1,0 0.1,0z
+                              M-57,-46a28,28 0 1,0 0.1,0z" />
+        <path
+            android:fillColor="#DE2110"
+            android:pathData="M0,-24a24,24 0 1,0 0.1,0z" />
+        <path
+            android:fillColor="#DE2110"
+            android:pathData="M0,-65a5,5 0 1,0 0.1,0z
+                              M57,-23a5,5 0 1,0 0.1,0z
+                              M35,43a5,5 0 1,0 0.1,0z
+                              M-35,43a5,5 0 1,0 0.1,0z
+                              M-57,-23a5,5 0 1,0 0.1,0z" />
+    </group>
+</vector>

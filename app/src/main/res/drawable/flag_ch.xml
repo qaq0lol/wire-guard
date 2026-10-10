@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Field -->
+    <path android:fillColor="#D52B1E" android:pathData="M0,0h640v480h-640z" />
+    <!-- White Swiss Cross Vertical -->
+    <path android:fillColor="#FFFFFF" android:pathData="M275,100h90v280h-90z" />
+    <!-- White Swiss Cross Horizontal -->
+    <path android:fillColor="#FFFFFF" android:pathData="M180,195h280v90h-280z" />
+</vector>

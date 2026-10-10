@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Royal Blue Field -->
+    <path android:fillColor="#00247D" android:pathData="M0,0h640v480h-640z" />
+    <!-- Union Jack Canton -->
+    <path android:fillColor="#00247D" android:pathData="M0,0h320v240h-320z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="40" android:pathData="M0,0L320,240M320,0L0,240" />
+    <path android:strokeColor="#CF142B" android:strokeWidth="24" android:pathData="M0,0L320,240M320,0L0,240" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="60" android:pathData="M160,0v240M0,120h320" />
+    <path android:strokeColor="#CF142B" android:strokeWidth="36" android:pathData="M160,0v240M0,120h320" />
+    <!-- Southern Cross 4 Stars (White outer + Red inner) -->
+    <!-- Top -->
+    <path android:fillColor="#FFFFFF" android:pathData="M480.0,78.0L484.9,93.2L500.9,93.2L488.0,102.6L492.9,117.8L480.0,108.4L467.1,117.8L472.0,102.6L459.1,93.2L475.1,93.2Z" />
+    <path android:fillColor="#CC142B" android:pathData="M480.0,85.0L483.4,95.4L494.3,95.4L485.4,101.8L488.8,112.1L480.0,105.7L471.2,112.1L474.6,101.8L465.7,95.4L476.6,95.4Z" />
+    <!-- Left -->
+    <path android:fillColor="#FFFFFF" android:pathData="M415.0,195.0L419.5,208.8L434.0,208.8L422.3,217.4L426.8,231.2L415.0,222.6L403.2,231.2L407.7,217.4L396.0,208.8L410.5,208.8Z" />
+    <path android:fillColor="#CC142B" android:pathData="M415.0,202.0L417.9,211.0L427.4,211.0L419.7,216.5L422.6,225.5L415.0,220.0L407.4,225.5L410.3,216.5L402.6,211.0L412.1,211.0Z" />
+    <!-- Right -->
+    <path android:fillColor="#FFFFFF" android:pathData="M545.0,175.0L549.5,188.8L564.0,188.8L552.3,197.4L556.8,211.2L545.0,202.6L533.2,211.2L537.7,197.4L526.0,188.8L540.5,188.8Z" />
+    <path android:fillColor="#CC142B" android:pathData="M545.0,182.0L547.9,191.0L557.4,191.0L549.7,196.5L552.6,205.5L545.0,200.0L537.4,205.5L540.3,196.5L532.6,191.0L542.1,191.0Z" />
+    <!-- Bottom -->
+    <path android:fillColor="#FFFFFF" android:pathData="M480.0,319.0L485.8,337.0L504.7,337.0L489.4,348.1L495.3,366.0L480.0,354.9L464.7,366.0L470.6,348.1L455.3,337.0L474.2,337.0Z" />
+    <path android:fillColor="#CC142B" android:pathData="M480.0,327.0L484.0,339.4L497.1,339.4L486.5,347.1L490.6,359.6L480.0,351.9L469.4,359.6L473.5,347.1L462.9,339.4L476.0,339.4Z" />
+</vector>

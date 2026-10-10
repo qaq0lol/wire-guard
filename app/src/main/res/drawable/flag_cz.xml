@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- White Top -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,0h640v240h-640z" />
+    <!-- Red Bottom -->
+    <path android:fillColor="#D7141A" android:pathData="M0,240h640v240h-640z" />
+    <!-- Blue Triangle -->
+    <path android:fillColor="#11457E" android:pathData="M0,0 L320,240 L0,480 Z" />
+</vector>

@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Background -->
+    <path
+        android:fillColor="#B22234"
+        android:pathData="M0,0h640v480h-640z" />
+    <!-- White Horizontal Stripes (6 white stripes out of 13) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M0,37h640v37h-640z M0,111h640v37h-640z M0,185h640v37h-640z M0,259h640v37h-640z M0,333h640v37h-640z M0,407h640v37h-640z" />
+    <!-- Blue Canton -->
+    <path
+        android:fillColor="#3C3B6E"
+        android:pathData="M0,0h280v259h-280z" />
+    <!-- White Canton Stars (Simplified Grid Pattern) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,27a8,8 0 1,0 0.1,0z M95,27a8,8 0 1,0 0.1,0z M150,27a8,8 0 1,0 0.1,0z M205,27a8,8 0 1,0 0.1,0z M250,27a8,8 0 1,0 0.1,0z
+                          M67,62a8,8 0 1,0 0.1,0z M122,62a8,8 0 1,0 0.1,0z M177,62a8,8 0 1,0 0.1,0z M230,62a8,8 0 1,0 0.1,0z
+                          M40,97a8,8 0 1,0 0.1,0z M95,97a8,8 0 1,0 0.1,0z M150,97a8,8 0 1,0 0.1,0z M205,97a8,8 0 1,0 0.1,0z M250,97a8,8 0 1,0 0.1,0z
+                          M67,132a8,8 0 1,0 0.1,0z M122,132a8,8 0 1,0 0.1,0z M177,132a8,8 0 1,0 0.1,0z M230,132a8,8 0 1,0 0.1,0z
+                          M40,167a8,8 0 1,0 0.1,0z M95,167a8,8 0 1,0 0.1,0z M150,167a8,8 0 1,0 0.1,0z M205,167a8,8 0 1,0 0.1,0z M250,167a8,8 0 1,0 0.1,0z
+                          M67,202a8,8 0 1,0 0.1,0z M122,202a8,8 0 1,0 0.1,0z M177,202a8,8 0 1,0 0.1,0z M230,202a8,8 0 1,0 0.1,0z" />
+</vector>

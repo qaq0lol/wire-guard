@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Top -->
+    <path android:fillColor="#AA151B" android:pathData="M0,0h640v120h-640z" />
+    <!-- Yellow Middle (Double Width) -->
+    <path android:fillColor="#F1BF00" android:pathData="M0,120h640v240h-640z" />
+    <!-- Red Bottom -->
+    <path android:fillColor="#AA151B" android:pathData="M0,360h640v120h-640z" />
+    <!-- Spanish Coat of Arms Simplified -->
+    <!-- Crown -->
+    <path android:fillColor="#AA151B" android:pathData="M185,170 L215,170 L220,190 L180,190 Z" />
+    <!-- Shield -->
+    <path android:fillColor="#AA151B" android:pathData="M180,195h40v35c0,15 -20,25 -20,25c0,0 -20,-10 -20,-25z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M185,200h15v15h-15z M200,215h15v15h-15z" />
+    <!-- Pillars of Hercules -->
+    <path android:fillColor="#C0C0C0" android:pathData="M165,185h8v65h-8z M227,185h8v65h-8z" />
+</vector>

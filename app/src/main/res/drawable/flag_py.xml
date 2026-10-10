@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Top -->
+    <path android:fillColor="#D52B1E" android:pathData="M0,0h640v160h-640z" />
+    <!-- White Middle -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,160h640v160h-640z" />
+    <!-- Blue Bottom -->
+    <path android:fillColor="#0038A8" android:pathData="M0,320h640v160h-640z" />
+    <!-- National Seal Center -->
+    <path android:strokeColor="#2E7D32" android:strokeWidth="8" android:fillColor="#00000000" android:pathData="M320,195a45,45 0 1,0 0.1,0z" />
+    <path android:fillColor="#FCD116" android:pathData="M320.0,220.0L324.5,233.8L339.0,233.8L327.3,242.4L331.8,256.2L320.0,247.6L308.2,256.2L312.7,242.4L301.0,233.8L315.5,233.8Z" />
+</vector>

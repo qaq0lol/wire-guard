@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Germany Horizontal Tricolour: Black, Red, Gold -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M0,0h640v160h-640z" />
+    <path
+        android:fillColor="#DD0000"
+        android:pathData="M0,160h640v160h-640z" />
+    <path
+        android:fillColor="#FFCE00"
+        android:pathData="M0,320h640v160h-640z" />
+</vector>

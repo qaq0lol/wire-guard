@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Sky Blue Left -->
+    <path android:fillColor="#4997D0" android:pathData="M0,0h213v480h-213z" />
+    <!-- White Center -->
+    <path android:fillColor="#FFFFFF" android:pathData="M213,0h214v480h-214z" />
+    <!-- Sky Blue Right -->
+    <path android:fillColor="#4997D0" android:pathData="M427,0h213v480h-213z" />
+    <!-- Laurel Wreath & Quetzal -->
+    <path android:strokeColor="#2E7D32" android:strokeWidth="10" android:pathData="M265,240 C265,285 375,285 375,240" />
+    <path android:strokeColor="#795548" android:strokeWidth="6" android:pathData="M270,210 L370,270 M370,210 L270,270" />
+    <path android:fillColor="#00E676" android:pathData="M320,200 C335,210 330,245 320,250 C310,245 305,210 320,200 Z" />
+</vector>

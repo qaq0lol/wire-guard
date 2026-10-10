@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Field -->
+    <path android:fillColor="#E30A17" android:pathData="M0,0h640v480h-640z" />
+    <!-- White Crescent Base Circle (cx=250, cy=240, r=120) -->
+    <path android:fillColor="#FFFFFF" android:pathData="M250,120a120,120 0 1,0 0.1,0z" />
+    <!-- Red Crescent Cutout Circle (cx=280, cy=240, r=96) -->
+    <path android:fillColor="#E30A17" android:pathData="M280,144a96,96 0 1,0 0.1,0z" />
+    <!-- White 5-Pointed Star -->
+    <path android:fillColor="#FFFFFF" android:pathData="M375.0,192.0L385.8,225.2L420.7,225.2L392.4,245.7L403.2,278.8L375.0,258.3L346.8,278.8L357.6,245.7L329.3,225.2L364.2,225.2Z" />
+</vector>

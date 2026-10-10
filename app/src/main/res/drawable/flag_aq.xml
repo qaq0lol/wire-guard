@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Ocean Blue Field -->
+    <path android:fillColor="#003399" android:pathData="M0,0h640v480h-640z" />
+    <!-- White Antarctica Silhouette -->
+    <path android:fillColor="#FFFFFF" android:pathData="M230,135 C265,110 330,120 375,140 C420,160 470,190 475,240 C480,290 445,340 395,355 C345,370 280,360 235,335 C190,310 170,270 175,225 C180,180 195,160 230,135 Z M205,190 L185,130 L210,145 Z" />
+</vector>

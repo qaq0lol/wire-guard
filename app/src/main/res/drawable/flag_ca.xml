@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Red Left Stripe -->
+    <path android:fillColor="#FF0000" android:pathData="M0,0h160v480h-160z" />
+    <!-- White Middle Square -->
+    <path android:fillColor="#FFFFFF" android:pathData="M160,0h320v480h-320z" />
+    <!-- Red Right Stripe -->
+    <path android:fillColor="#FF0000" android:pathData="M480,0h160v480h-160z" />
+    <!-- Stylized 11-Point Maple Leaf -->
+    <path android:fillColor="#FF0000" android:pathData="M320,85 L334,145 L365,135 L350,175 L392,175 L402,205 L372,220 L410,240 L390,270 L336,252 L342,278 L326,284 L326,395 L314,395 L314,284 L298,278 L304,252 L250,270 L230,240 L268,220 L238,205 L248,175 L290,175 L275,135 L306,145 Z" />
+</vector>

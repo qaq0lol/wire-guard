@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Azure Blue Top -->
+    <path android:fillColor="#0057B7" android:pathData="M0,0h640v240h-640z" />
+    <!-- Yellow Bottom -->
+    <path android:fillColor="#FFDD00" android:pathData="M0,240h640v240h-640z" />
+</vector>

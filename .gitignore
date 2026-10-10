@@ -1,0 +1,17 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.apk
+
+# Sensitive proxy configurations & private keys
+app/src/main/assets/bundled_nodes/
+*.conf
+*.ovpn
+gradle-build.log

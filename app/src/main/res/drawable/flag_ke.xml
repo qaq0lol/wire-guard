@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Black Top -->
+    <path android:fillColor="#000000" android:pathData="M0,0h640v140h-640z" />
+    <!-- White Stripe 1 -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,140h640v20h-640z" />
+    <!-- Red Middle -->
+    <path android:fillColor="#BB162B" android:pathData="M0,160h640v160h-640z" />
+    <!-- White Stripe 2 -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,320h640v20h-640z" />
+    <!-- Green Bottom -->
+    <path android:fillColor="#006600" android:pathData="M0,340h640v140h-640z" />
+    <!-- Crossed White Spears -->
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="10" android:pathData="M250,140 L390,340 M390,140 L250,340" />
+    <!-- Maasai Shield -->
+    <path android:fillColor="#BB162B" android:pathData="M320,150 C365,190 365,290 320,330 C275,290 275,190 320,150 Z" />
+    <!-- Shield Markings -->
+    <path android:fillColor="#000000" android:pathData="M320,150 C300,190 300,290 320,330 C290,290 290,190 320,150 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M320,220h12v40h-12z M320,230a10,10 0 1,0 0.1,0z" />
+</vector>

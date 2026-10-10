@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Blue Top Half -->
+    <path android:fillColor="#0038A8" android:pathData="M0,0h640v240h-640z" />
+    <!-- Red Bottom Half -->
+    <path android:fillColor="#CE1126" android:pathData="M0,240h640v240h-640z" />
+    <!-- White Equilateral Triangle -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,0 L346,240 L0,480 Z" />
+    <!-- Golden Sun Disc -->
+    <path android:fillColor="#FCD116" android:pathData="M120,216a24,24 0 1,0 0.1,0z" />
+    <path android:strokeColor="#FCD116" android:strokeWidth="7" android:pathData="M144.0,240.0 L160.0,240.0" />
+    <path android:strokeColor="#FCD116" android:strokeWidth="7" android:pathData="M137.0,257.0 L148.3,268.3" />
+    <path android:strokeColor="#FCD116" android:strokeWidth="7" android:pathData="M120.0,264.0 L120.0,280.0" />
+    <path android:strokeColor="#FCD116" android:strokeWidth="7" android:pathData="M103.0,257.0 L91.7,268.3" />
+    <path android:strokeColor="#FCD116" android:strokeWidth="7" android:pathData="M96.0,240.0 L80.0,240.0" />
+    <path android:strokeColor="#FCD116" android:strokeWidth="7" android:pathData="M103.0,223.0 L91.7,211.7" />
+    <path android:strokeColor="#FCD116" android:strokeWidth="7" android:pathData="M120.0,216.0 L120.0,200.0" />
+    <path android:strokeColor="#FCD116" android:strokeWidth="7" android:pathData="M137.0,223.0 L148.3,211.7" />
+    <!-- 3 Golden Stars -->
+    <path android:fillColor="#FCD116" android:pathData="M42.0,52.0L45.6,63.1L57.2,63.1L47.8,69.9L51.4,80.9L42.0,74.1L32.6,80.9L36.2,69.9L26.8,63.1L38.4,63.1Z" />
+    <path android:fillColor="#FCD116" android:pathData="M42.0,396.0L45.6,407.1L57.2,407.1L47.8,413.9L51.4,424.9L42.0,418.1L32.6,424.9L36.2,413.9L26.8,407.1L38.4,407.1Z" />
+    <path android:fillColor="#FCD116" android:pathData="M275.0,224.0L278.6,235.1L290.2,235.1L280.8,241.9L284.4,252.9L275.0,246.1L265.6,252.9L269.2,241.9L259.8,235.1L271.4,235.1Z" />
+</vector>

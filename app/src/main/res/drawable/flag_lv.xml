@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="38dp"
+    android:viewportWidth="640"
+    android:viewportHeight="480">
+    <!-- Carmine Red Top -->
+    <path android:fillColor="#9E3039" android:pathData="M0,0h640v192h-640z" />
+    <!-- Narrow White Middle -->
+    <path android:fillColor="#FFFFFF" android:pathData="M0,192h640v96h-640z" />
+    <!-- Carmine Red Bottom -->
+    <path android:fillColor="#9E3039" android:pathData="M0,288h640v192h-640z" />
+</vector>
