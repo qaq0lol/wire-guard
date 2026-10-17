@@ -91,6 +91,7 @@
             android:textSize="14sp"
             android:layout_marginEnd="6dp"
             app:cornerRadius="18dp" />
+            app:backgroundTint="@color/brand_primary_container"
 
         <!-- 3. 🌙 深浅模式切换图标 (统一 36x36dp 圆形风格) -->
         <com.google.android.material.button.MaterialButton
@@ -110,6 +111,7 @@
             android:textColor="@color/text_primary"
             android:layout_marginEnd="6dp"
             app:cornerRadius="18dp" />
+            app:backgroundTint="@color/brand_primary_container"
 
         <!-- 4. ⚙️ 设置窗口图标 (右上角) -->
         <com.google.android.material.button.MaterialButton
@@ -127,6 +129,7 @@
             android:text="⚙️"
             android:textSize="14sp"
             app:cornerRadius="18dp" />
+            app:backgroundTint="@color/brand_primary_container"
     </LinearLayout>
 
     <View
@@ -199,13 +202,15 @@
                                 android:elevation="8dp"
                                 android:orientation="vertical">
 
-                                <TextView
+                                <ImageView
                                     android:id="@+id/tv_orb_icon"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="⚡"
-                                    android:textColor="@color/white"
-                                    android:textSize="32sp" />
+                                    android:layout_width="36dp"
+                                    android:layout_height="36dp"
+                                    android:layout_marginBottom="2dp"
+                                    android:src="@drawable/ic_power"
+                                    android:tint="@color/white"
+                                    android:scaleType="fitCenter"
+                                    android:contentDescription="VPN 状态" />
 
                                 <TextView
                                     android:id="@+id/tv_orb_status_text"
@@ -223,14 +228,18 @@
                         <!-- Protection State Badge -->
                         <TextView
                             android:id="@+id/tv_protection_badge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+                            android:layout_width="match_parent"
+                            android:layout_height="42dp"
+                            android:layout_marginStart="8dp"
+                            android:layout_marginEnd="8dp"
                             android:background="@drawable/badge_rounded_bg"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"
-                            android:paddingTop="5dp"
-                            android:paddingBottom="5dp"
-                            android:text="⚠️ 代理未开启 · 点击能量环启动"
+                            android:gravity="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="2"
+                            android:ellipsize="end"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:text="代理未开启 · 点击能量环启动"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp"
                             android:textStyle="bold" />
@@ -324,6 +333,39 @@
                                 android:textColor="@color/status_green"
                                 android:textSize="11sp"
                                 android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:layout_marginTop="8dp"
+                            android:background="@drawable/badge_rounded_bg"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="出口 IP"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tv_mini_public_ip"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:layout_marginStart="12dp"
+                                android:gravity="center_vertical|end"
+                                android:fontFamily="monospace"
+                                android:singleLine="true"
+                                android:ellipsize="end"
+                                android:text="--"
+                                android:textColor="@color/text_primary"
+                                android:textSize="11sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>

@@ -13,6 +13,8 @@ import android.view.View;
 import android.view.animation.LinearInterpolator;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import com.proxy.wireopen.R;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,21 +72,21 @@ public class OscilloscopeWaveformView extends View {
         float density = getResources().getDisplayMetrics().density;
 
         // Grid paint (Minimalist dashed lines)
-        gridPaint.setColor(Color.parseColor("#10B981"));
+        gridPaint.setColor(ContextCompat.getColor(getContext(), R.color.brand_primary));
         gridPaint.setAlpha(26); // ~10% opacity
         gridPaint.setStyle(Paint.Style.STROKE);
         gridPaint.setStrokeWidth(1f * density);
         gridPaint.setPathEffect(new DashPathEffect(new float[]{6 * density, 6 * density}, 0));
 
         // Downlink Curve: Emerald Green (#10B981)
-        dlPaint.setColor(Color.parseColor("#10B981"));
+        dlPaint.setColor(ContextCompat.getColor(getContext(), R.color.status_green));
         dlPaint.setStyle(Paint.Style.STROKE);
         dlPaint.setStrokeWidth(2f * density);
         dlPaint.setStrokeCap(Paint.Cap.ROUND);
         dlPaint.setStrokeJoin(Paint.Join.ROUND);
 
         // Downlink Glow pass (subtle aura underneath)
-        dlGlowPaint.setColor(Color.parseColor("#34D399"));
+        dlGlowPaint.setColor(ContextCompat.getColor(getContext(), R.color.status_green));
         dlGlowPaint.setStyle(Paint.Style.STROKE);
         dlGlowPaint.setStrokeWidth(4.5f * density);
         dlGlowPaint.setAlpha(45);
@@ -92,17 +94,17 @@ public class OscilloscopeWaveformView extends View {
         dlGlowPaint.setStrokeJoin(Paint.Join.ROUND);
 
         // Uplink Curve: Tech Purple / Indigo Dashed Line (#818CF8)
-        ulPaint.setColor(Color.parseColor("#818CF8"));
+        ulPaint.setColor(ContextCompat.getColor(getContext(), R.color.accent_wireguard));
         ulPaint.setStyle(Paint.Style.STROKE);
         ulPaint.setStrokeWidth(1.5f * density);
         ulPaint.setStrokeCap(Paint.Cap.ROUND);
         ulPaint.setPathEffect(new DashPathEffect(new float[]{5 * density, 5 * density}, 0));
 
         // Pulse Particle Paints
-        pulseHaloPaint.setColor(Color.parseColor("#34D399"));
+        pulseHaloPaint.setColor(ContextCompat.getColor(getContext(), R.color.status_green));
         pulseHaloPaint.setStyle(Paint.Style.FILL);
 
-        pulseCorePaint.setColor(Color.parseColor("#34D399"));
+        pulseCorePaint.setColor(ContextCompat.getColor(getContext(), R.color.status_green));
         pulseCorePaint.setStyle(Paint.Style.FILL);
 
         pulseStrokePaint.setColor(Color.WHITE);

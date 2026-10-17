@@ -148,13 +148,14 @@ public class MainActivity extends AppCompatActivity {
     // Giant Orb Switch Views (Dashboard)
     private View orbRing;
     private LinearLayout btnOrbSwitch;
-    private TextView tvOrbIcon;
+    private ImageView tvOrbIcon;
     private TextView tvOrbStatusText;
     private TextView tvProtectionBadge;
 
     // Mini Outbound Banner
     private TextView tvMiniGeoFlag;
     private TextView tvMiniGeoIp;
+    private TextView tvMiniPublicIp;
     private TextView tvMiniProtocolBadge;
     private TextView tvMiniGeoLocation;
     private TextView tvMiniPingBadge;
@@ -199,6 +200,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Egress probe state
     private String egressProbeStatus = null;
+    private String egressIp = null;
     private final java.util.concurrent.atomic.AtomicBoolean isProbingEgress = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     private String activeProtocol = "WIREGUARD";
@@ -280,7 +282,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void updateProtectionBadgeText() {
-        if (!isTimerRunning) return;
+        if (!isTimerRunning || tvProtectionBadge == null) return;
         TrafficStatsManager stats = TrafficStatsManager.getInstance();
         String timeStr;
         if (stats != null && stats.isSessionActive()) {
@@ -292,22 +294,26 @@ public class MainActivity extends AppCompatActivity {
             long s = elapsed % 60;
             timeStr = String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s);
         }
+
+        String statusLabel = "安全隧道运行中";
+        int statusColor = ContextCompat.getColor(this, R.color.brand_primary);
         if (egressProbeStatus != null) {
-            tvProtectionBadge.setText(egressProbeStatus + " · " + timeStr);
-            if (egressProbeStatus.startsWith("🟢")) {
-                tvProtectionBadge.setTextColor(ContextCompat.getColor(this, R.color.status_green));
-            } else if (egressProbeStatus.startsWith("🔴")) {
-                tvProtectionBadge.setTextColor(ContextCompat.getColor(this, R.color.status_red));
+            if (egressProbeStatus.startsWith("外网已通")) {
+                statusLabel = "外网已通";
+                statusColor = ContextCompat.getColor(this, R.color.status_green);
+            } else if (egressProbeStatus.startsWith("外网探测失败")) {
+                statusLabel = "外网探测失败";
+                statusColor = ContextCompat.getColor(this, R.color.status_red);
             } else {
-                tvProtectionBadge.setTextColor(ContextCompat.getColor(this, R.color.brand_primary));
+                statusLabel = "正在检测外网";
+                statusColor = ContextCompat.getColor(this, R.color.text_secondary);
             }
-        } else {
-            tvProtectionBadge.setText("🛡️ 已受安全代理保护 · " + timeStr);
-            tvProtectionBadge.setTextColor(ContextCompat.getColor(this, R.color.brand_primary));
         }
+        tvProtectionBadge.setText(statusLabel + " · " + timeStr);
+        tvProtectionBadge.setTextColor(statusColor);
     }
 
-        private int request204(String endpoint, int timeoutMs) throws IOException {
+    private int request204(String endpoint, int timeoutMs) throws IOException {
         java.net.HttpURLConnection connection = null;
         try {
             connection = (java.net.HttpURLConnection) new java.net.URL(endpoint).openConnection();
@@ -344,7 +350,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void probeEgressConnectivity() {
         if (!isProbingEgress.compareAndSet(false, true)) return;
-        egressProbeStatus = "🟡 探测外网中";
+        egressProbeStatus = "正在检测外网";
+        egressIp = null;
+        if (tvMiniPublicIp != null) tvMiniPublicIp.setText("查询中…");
         updateProtectionBadgeText();
 
         new Thread(() -> {
@@ -397,16 +405,22 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if (reachable) {
                     if (ip != null && !ip.trim().isEmpty()) {
-                        egressProbeStatus = "🟢 外网已通 · " + ip.trim()
-                                + " (" + (latency > 0 ? latency + "ms" : "延迟未知") + ")";
+                        egressIp = ip.trim();
+                        egressProbeStatus = "外网已通";
+                        if (tvMiniPublicIp != null) tvMiniPublicIp.setText(egressIp);
                     } else {
-                        egressProbeStatus = "🟢 外网已通 (出口 IP 查询失败)";
+                        egressIp = null;
+                        egressProbeStatus = "外网已通但出口 IP 查询失败";
+                        if (tvMiniPublicIp != null) tvMiniPublicIp.setText("获取失败");
                     }
                 } else {
-                    egressProbeStatus = "🔴 外网探测失败";
+                    egressIp = null;
+                    egressProbeStatus = "外网探测失败";
+                    if (tvMiniPublicIp != null) tvMiniPublicIp.setText("检测失败");
                 }
                 updateProtectionBadgeText();
-                LogManager.info("MainActivity", "外网出口探测: " + egressProbeStatus);
+                LogManager.info("MainActivity", "外网出口探测: " + egressProbeStatus
+                        + (egressIp != null ? "，出口 IP：" + egressIp : ""));
             });
         }, "WireOpen-EgressProbe").start();
     }
@@ -541,6 +555,7 @@ public class MainActivity extends AppCompatActivity {
         // Mini Outbound Info
         tvMiniGeoFlag = findViewById(R.id.tv_mini_geo_flag);
         tvMiniGeoIp = findViewById(R.id.tv_mini_geo_ip);
+        tvMiniPublicIp = findViewById(R.id.tv_mini_public_ip);
         tvMiniProtocolBadge = findViewById(R.id.tv_mini_protocol_badge);
         tvMiniGeoLocation = findViewById(R.id.tv_mini_geo_location);
         tvMiniPingBadge = findViewById(R.id.tv_mini_ping_badge);
@@ -3005,7 +3020,8 @@ public class MainActivity extends AppCompatActivity {
             case CONNECTED:
                 btnOrbSwitch.setBackgroundResource(R.drawable.bg_orb_connected);
                 orbRing.setBackgroundResource(R.drawable.bg_orb_ring_connected);
-                tvOrbIcon.setText("⚡");
+                tvOrbIcon.setImageResource(R.drawable.ic_power);
+                tvOrbIcon.setContentDescription("VPN 状态");
                 tvOrbStatusText.setText("已连接");
                 tvProtectionBadge.setOnClickListener(v -> {
                     Toast.makeText(this, "正在重新检测外网出口与 IP…", Toast.LENGTH_SHORT).show();
@@ -3048,8 +3064,10 @@ public class MainActivity extends AppCompatActivity {
                 TrafficStatsManager.getInstance().stopSession();
                 btnOrbSwitch.setBackgroundResource(R.drawable.bg_orb_connecting);
                 orbRing.setBackgroundResource(R.drawable.bg_orb_ring_connecting);
-                tvOrbIcon.setText("⏳");
+                tvOrbIcon.setImageResource(R.drawable.ic_hourglass);
+                tvOrbIcon.setContentDescription("正在切换 VPN 状态");
                 tvOrbStatusText.setText("连接中...");
+                if (tvMiniPublicIp != null) tvMiniPublicIp.setText("连接后检测");
                 tvProtectionBadge.setText("正在建立安全隧道...");
                 tvProtectionBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
                 tvProtectionBadge.setOnClickListener(null);
@@ -3062,8 +3080,10 @@ public class MainActivity extends AppCompatActivity {
             case DISCONNECTING:
                 btnOrbSwitch.setBackgroundResource(R.drawable.bg_orb_connecting);
                 orbRing.setBackgroundResource(R.drawable.bg_orb_ring_connecting);
-                tvOrbIcon.setText("⏳");
+                tvOrbIcon.setImageResource(R.drawable.ic_hourglass);
+                tvOrbIcon.setContentDescription("正在切换 VPN 状态");
                 tvOrbStatusText.setText("断开中...");
+                if (tvMiniPublicIp != null) tvMiniPublicIp.setText("--");
                 tvProtectionBadge.setText("正在终止安全隧道...");
                 tvProtectionBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
                 tvProtectionBadge.setOnClickListener(null);
@@ -3077,8 +3097,10 @@ public class MainActivity extends AppCompatActivity {
             case ERROR:
                 btnOrbSwitch.setBackgroundResource(R.drawable.bg_orb_disconnected);
                 orbRing.setBackgroundResource(R.drawable.bg_orb_ring_disconnected);
-                tvOrbIcon.setText("⚠️");
+                tvOrbIcon.setImageResource(R.drawable.ic_warning);
+                tvOrbIcon.setContentDescription("VPN 连接失败");
                 tvOrbStatusText.setText("连接失败");
+                if (tvMiniPublicIp != null) tvMiniPublicIp.setText("检测失败");
                 String displayReason = (lastErrorMessageDisplay != null) ? lastErrorMessageDisplay : "请检查节点配置与网络";
                 tvProtectionBadge.setText("❌ " + displayReason + " (点击查看日志)");
                 tvProtectionBadge.setTextColor(ContextCompat.getColor(this, R.color.brand_primary));
@@ -3095,8 +3117,11 @@ public class MainActivity extends AppCompatActivity {
             default:
                 btnOrbSwitch.setBackgroundResource(R.drawable.bg_orb_disconnected);
                 orbRing.setBackgroundResource(R.drawable.bg_orb_ring_disconnected);
-                tvOrbIcon.setText("⚡");
+                tvOrbIcon.setImageResource(R.drawable.ic_power);
+                tvOrbIcon.setContentDescription("VPN 状态");
                 tvOrbStatusText.setText("未连接");
+                egressIp = null;
+                if (tvMiniPublicIp != null) tvMiniPublicIp.setText("--");
                 if (lastErrorMessageDisplay != null) {
                     tvProtectionBadge.setText("❌ " + lastErrorMessageDisplay + " (点击查看日志)");
                     tvProtectionBadge.setTextColor(ContextCompat.getColor(this, R.color.brand_primary));
