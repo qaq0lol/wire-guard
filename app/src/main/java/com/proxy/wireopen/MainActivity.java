@@ -78,6 +78,8 @@ import com.proxy.wireopen.repository.ProfileRepository;
 import com.proxy.wireopen.model.PresetPortItem;
 import com.proxy.wireopen.model.PresetRegion;
 import com.proxy.wireopen.repository.PresetRegionManager;
+import com.proxy.wireopen.service.DoubleHopConfigBuilder;
+import com.proxy.wireopen.service.DoubleHopVpnService;
 import com.proxy.wireopen.service.UnifiedVpnService;
 import com.proxy.wireopen.service.IpPureChecker;
 import com.proxy.wireopen.util.CredentialManager;
