@@ -40,6 +40,8 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
 
         private const val CHANNEL_ID = "wireopen_double_hop_channel"
         private const val NOTIFICATION_ID = 1002
+        private const val STARTUP_TIMEOUT_MS = 30_000L
+        private const val STOP_FORCE_CLOSE_DELAY_MS = 2_500L
         @Volatile private var libboxInitialized = false
         @Volatile private var activeTun: ParcelFileDescriptor? = null
 
@@ -58,11 +60,6 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     @Volatile private var starting = false
     @Volatile private var commandServer: CommandServer? = null
     private var configText: String? = null
-
-    private companion object StartupLimits {
-        const val STARTUP_TIMEOUT_MS = 30_000L
-        const val STOP_FORCE_CLOSE_DELAY_MS = 2_500L
-    }
 
     private val startupTimeoutRunnable = Runnable {
         if (starting && !startupFinished && !stopOnce.get()) {
