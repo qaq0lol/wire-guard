@@ -82,6 +82,7 @@ import com.proxy.wireopen.util.CredentialManager;
 import com.proxy.wireopen.util.IpGeoResolver;
 import com.proxy.wireopen.engine.OpenVpnEngine;
 import com.proxy.wireopen.util.LogManager;
+import com.proxy.wireopen.util.DoubleHopCrashJournal;
 import com.proxy.wireopen.util.PortSpeedTester;
 import com.proxy.wireopen.util.RegionDetector;
 import com.proxy.wireopen.util.SplitTunnelManager;
@@ -448,6 +449,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Restore the last native-startup checkpoint after an abrupt libbox process crash.
+        DoubleHopCrashJournal.restore(this);
         setContentView(R.layout.activity_main);
 
         // Android 16 edge-to-edge system bars insets handling
