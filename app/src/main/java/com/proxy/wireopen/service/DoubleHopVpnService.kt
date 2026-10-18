@@ -24,6 +24,7 @@ import com.proxy.wireopen.R
 import com.proxy.wireopen.model.ConnectionState
 import com.proxy.wireopen.model.ProxyProfile
 import com.proxy.wireopen.util.LogManager
+import com.proxy.wireopen.util.DoubleHopCrashJournal
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
