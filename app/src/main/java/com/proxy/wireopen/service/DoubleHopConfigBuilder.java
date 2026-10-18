@@ -58,6 +58,12 @@ public final class DoubleHopConfigBuilder {
         JsonArray outbounds = new JsonArray();
         outbounds.add(buildWireGuardEndpoint(first, "hop1", null));
         outbounds.add(buildWireGuardEndpoint(second, "hop2", "hop1"));
+
+        JsonObject directOutbound = new JsonObject();
+        directOutbound.addProperty("type", "direct");
+        directOutbound.addProperty("tag", "direct");
+        outbounds.add(directOutbound);
+
         root.add("outbounds", outbounds);
 
         JsonObject dns = new JsonObject();
@@ -67,6 +73,7 @@ public final class DoubleHopConfigBuilder {
         bootstrapDns.addProperty("tag", "dns-bootstrap");
         bootstrapDns.addProperty("type", "udp");
         bootstrapDns.addProperty("server", "223.5.5.5");
+        bootstrapDns.addProperty("detour", "direct");
 
         JsonObject tunnelDns = new JsonObject();
         tunnelDns.addProperty("tag", "dns-tunnel");
@@ -160,7 +167,7 @@ public final class DoubleHopConfigBuilder {
         allowedIps.add("::/0");
         peer.add("allowed_ips", allowedIps);
         if (cfg.getPersistentKeepalive() > 0) {
-            peer.addProperty("persistent_keepalive_interval", cfg.getPersistentKeepalive());
+            peer.addProperty("persistent_keepalive", cfg.getPersistentKeepalive());
         }
         peers.add(peer);
         endpoint.add("peers", peers);
