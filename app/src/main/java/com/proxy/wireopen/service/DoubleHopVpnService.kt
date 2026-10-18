@@ -259,6 +259,8 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
 
     private fun fail(message: String) {
         if (!failurePosted.compareAndSet(false, true)) return
+        // Invalidate any startup worker that may return after the timeout.
+        startupGeneration.incrementAndGet()
         LogManager.error("DoubleHopVpnService", message)
         Log.e("DoubleHopVpnService", message)
         mainHandler.post {
