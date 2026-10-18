@@ -60,6 +60,19 @@
                 android:value="VPN Tunnel Service for WireGuard and OpenVPN protocols" />
         </service>
 
+        <service
+            android:name=".service.DoubleHopVpnService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:foregroundServiceType="specialUse">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Chained two-hop VPN tunnel" />
+        </service>
+
     </application>
 
 </manifest>

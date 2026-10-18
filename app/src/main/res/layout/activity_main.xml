@@ -92,6 +92,25 @@
             android:layout_marginEnd="6dp"
             app:cornerRadius="18dp" />
 
+        <!-- 2. 🔀 双跳模式选择按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_double_hop"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="48dp"
+            android:layout_height="36dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:padding="0dp"
+            android:text="双跳"
+            android:textSize="12sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginEnd="6dp"
+            app:cornerRadius="18dp" />
+
         <!-- 3. 🌙 深浅模式切换图标 (统一 36x36dp 圆形风格) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_theme_toggle"
