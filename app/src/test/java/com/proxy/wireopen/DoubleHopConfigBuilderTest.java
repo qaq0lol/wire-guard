@@ -57,9 +57,13 @@ public class DoubleHopConfigBuilderTest {
 
         JsonArray dnsServers = config.getAsJsonObject("dns").getAsJsonArray("servers");
         assertEquals("dns-bootstrap", dnsServers.get(0).getAsJsonObject().get("tag").getAsString());
+        assertEquals("udp", dnsServers.get(0).getAsJsonObject().get("type").getAsString());
+        assertEquals("223.5.5.5", dnsServers.get(0).getAsJsonObject().get("address").getAsString());
         assertFalse("Bootstrap DNS must not detour to an empty direct outbound",
                 dnsServers.get(0).getAsJsonObject().has("detour"));
         assertEquals("hop2", dnsServers.get(1).getAsJsonObject().get("detour").getAsString());
+        assertEquals("udp", dnsServers.get(1).getAsJsonObject().get("type").getAsString());
+        assertEquals("1.1.1.1", dnsServers.get(1).getAsJsonObject().get("address").getAsString());
 
         JsonObject route = config.getAsJsonObject("route");
         assertEquals("dns-bootstrap", route.get("default_domain_resolver").getAsString());

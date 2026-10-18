@@ -65,11 +65,13 @@ public final class DoubleHopConfigBuilder {
 
         JsonObject bootstrapDns = new JsonObject();
         bootstrapDns.addProperty("tag", "dns-bootstrap");
+        bootstrapDns.addProperty("type", "udp");
         bootstrapDns.addProperty("address", "223.5.5.5");
         bootstrapDns.addProperty("strategy", "ipv4_only");
 
         JsonObject tunnelDns = new JsonObject();
         tunnelDns.addProperty("tag", "dns-tunnel");
+        tunnelDns.addProperty("type", "udp");
         tunnelDns.addProperty("address", "1.1.1.1");
         tunnelDns.addProperty("detour", "hop2");
 
