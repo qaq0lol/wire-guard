@@ -51,8 +51,24 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val stopOnce = AtomicBoolean(false)
-    private var commandServer: CommandServer? = null
+    private val cleanupStarted = AtomicBoolean(false)
+    private val failurePosted = AtomicBoolean(false)
+    private val startupGeneration = java.util.concurrent.atomic.AtomicInteger(0)
+    @Volatile private var startupFinished = false
+    @Volatile private var starting = false
+    @Volatile private var commandServer: CommandServer? = null
     private var configText: String? = null
+
+    private companion object StartupLimits {
+        const val STARTUP_TIMEOUT_MS = 30_000L
+        const val STOP_FORCE_CLOSE_DELAY_MS = 2_500L
+    }
+
+    private val startupTimeoutRunnable = Runnable {
+        if (starting && !startupFinished && !stopOnce.get()) {
+            fail("双跳启动超时（30 秒）。内核未完成启动，已触发自动清理，请检查节点连通性和配置。")
+        }
+    }
     private var currentProfile: ProxyProfile? = null
     private var firstName: String = "第一跳"
     private var secondName: String = "第二跳"
@@ -65,6 +81,7 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
+                LogManager.info("DoubleHopVpnService", "收到断开双跳请求")
                 stopTunnel()
                 return START_NOT_STICKY
             }
@@ -83,32 +100,93 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
                     @Suppress("DEPRECATION")
                     (intent.getSerializableExtra(UnifiedVpnService.EXTRA_PROFILE) as? ProxyProfile)
                 }
+                if (starting || (!stopOnce.get() &&
+                            (commandServer != null ||
+                             UnifiedVpnService.getCurrentState() == ConnectionState.CONNECTED))) {
+                    LogManager.warn("DoubleHopVpnService", "忽略重复的双跳启动请求")
+                    return START_NOT_STICKY
+                }
+                cleanupStarted.set(false)
+                failurePosted.set(false)
                 stopOnce.set(false)
+                startupFinished = false
+                starting = true
+                val token = startupGeneration.incrementAndGet()
                 UnifiedVpnService.publishDoubleHopState(this, ConnectionState.CONNECTING, null, currentProfile)
+                LogManager.info("DoubleHopVpnService", "双跳启动流程开始：$firstName → $secondName")
                 startForegroundCompat()
-                Thread({ startCore(content) }, "WireOpen-DoubleHopStart").start()
+                mainHandler.removeCallbacks(startupTimeoutRunnable)
+                mainHandler.postDelayed(startupTimeoutRunnable, STARTUP_TIMEOUT_MS)
+                Thread({ startCore(content, token) }, "WireOpen-DoubleHopStart").start()
             }
         }
         return START_NOT_STICKY
     }
 
-    private fun startCore(content: String) {
+    private fun startCore(content: String, token: Int) {
+        var server: CommandServer? = null
         try {
+            LogManager.info("DoubleHopVpnService", "启动阶段 1/4：初始化 sing-box")
             initializeLibbox()
-            val server = CommandServer(this, DoubleHopPlatform(this))
+            if (!isStartupCurrent(token)) return
+
+            LogManager.info("DoubleHopVpnService", "启动阶段 2/4：创建命令服务")
+            server = CommandServer(this, DoubleHopPlatform(this))
             commandServer = server
+
+            LogManager.info("DoubleHopVpnService", "启动阶段 3/4：启动命令服务")
             server.start()
+            if (!isStartupCurrent(token)) {
+                closeServerAsync(server, true)
+                return
+            }
+
+            LogManager.info("DoubleHopVpnService", "启动阶段 4/4：加载双跳配置并建立 TUN")
             server.startOrReloadService(content, OverrideOptions())
-            LogManager.info("DoubleHopVpnService", "双跳内核已启动：$firstName → $secondName")
+
+            if (!isStartupCurrent(token)) {
+                LogManager.warn("DoubleHopVpnService", "启动返回时连接已取消，丢弃过期启动结果")
+                closeServerAsync(server, true)
+                return
+            }
+
+            startupFinished = true
+            starting = false
+            mainHandler.removeCallbacks(startupTimeoutRunnable)
+            LogManager.info("DoubleHopVpnService", "双跳内核启动调用已返回：$firstName → $secondName")
             mainHandler.post {
+                if (!isStartupCurrent(token)) return@post
                 updateNotification("已连接：$firstName → $secondName")
                 UnifiedVpnService.publishDoubleHopState(this, ConnectionState.CONNECTED, null, currentProfile)
             }
         } catch (e: Exception) {
+            if (!isStartupCurrent(token)) {
+                LogManager.warn("DoubleHopVpnService", "已取消的启动线程退出：" + (e.message ?: e.javaClass.simpleName))
+                if (server != null) closeServerAsync(server, true)
+                return
+            }
             LogManager.error("DoubleHopVpnService", "双跳启动失败：" + (e.message ?: e.javaClass.simpleName))
             Log.e("DoubleHopVpnService", "Failed to start double-hop core", e)
             fail(e.message ?: "双跳内核启动失败")
+        } catch (t: Throwable) {
+            if (!isStartupCurrent(token)) return
+            LogManager.error("DoubleHopVpnService", "双跳启动发生严重错误：" + (t.message ?: t.javaClass.simpleName))
+            Log.e("DoubleHopVpnService", "Fatal error while starting double-hop core", t)
+            fail(t.message ?: "双跳启动发生严重错误")
         }
+    }
+
+    private fun isStartupCurrent(token: Int): Boolean =
+        token == startupGeneration.get() && !stopOnce.get()
+
+    private fun closeServerAsync(server: CommandServer, closeService: Boolean) {
+        Thread({
+            try {
+                if (closeService) runCatching { server.closeService() }
+            } finally {
+                runCatching { server.close() }
+            }
+        }, "WireOpen-DoubleHopStaleClose").start()
     }
 
     private fun initializeLibbox() {
@@ -183,35 +261,68 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     }
 
     private fun fail(message: String) {
+        if (!failurePosted.compareAndSet(false, true)) return
         LogManager.error("DoubleHopVpnService", message)
+        Log.e("DoubleHopVpnService", message)
         mainHandler.post {
+            if (stopOnce.get()) return@post
+            startupFinished = true
+            starting = false
+            mainHandler.removeCallbacks(startupTimeoutRunnable)
             UnifiedVpnService.publishDoubleHopState(this, ConnectionState.ERROR, message, currentProfile)
-            stopTunnel()
+            // Keep the error visible briefly, then release the VPN service even if the
+            // native start call never returns.
+            mainHandler.postDelayed({ stopTunnel() }, 1_500L)
         }
     }
 
     private fun stopTunnel(fromCommandServer: Boolean = false) {
-        if (!stopOnce.compareAndSet(false, true) && !fromCommandServer) return
+        if (!cleanupStarted.compareAndSet(false, true)) return
+        stopOnce.set(true)
+        starting = false
+        startupFinished = true
+        startupGeneration.incrementAndGet()
+        mainHandler.removeCallbacks(startupTimeoutRunnable)
+
         val server = commandServer
         commandServer = null
-        Thread({
-            try {
-                if (server != null) {
-                    if (!fromCommandServer) runCatching { server.closeService() }
+        val tun = activeTun
+        activeTun = null
+
+        // Drop the system VPN interface and publish the disconnected state before
+        // calling libbox shutdown. Native close methods may block during a failed startup.
+        if (tun != null) {
+            runCatching { tun.close() }
+                .onFailure { LogManager.warn("DoubleHopVpnService", "关闭 TUN 失败：" + (it.message ?: "未知错误")) }
+        }
+        LogManager.info("DoubleHopVpnService", "双跳断开请求已处理，正在清理内核")
+        UnifiedVpnService.publishDoubleHopState(this, ConnectionState.DISCONNECTED, null, null)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+
+        if (server != null) {
+            val shutdown = Thread({
+                val closeThread = Thread({
+                    try {
+                        if (!fromCommandServer) runCatching { server.closeService() }
+                    } finally {
+                        runCatching { server.close() }
+                    }
+                }, "WireOpen-DoubleHopNativeClose")
+                closeThread.start()
+                try {
+                    closeThread.join(STOP_FORCE_CLOSE_DELAY_MS)
+                } catch (ignored: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
+                if (closeThread.isAlive) {
+                    LogManager.warn("DoubleHopVpnService", "内核关闭超时，执行强制 close")
                     runCatching { server.close() }
+                    closeThread.interrupt()
                 }
-                activeTun?.let {
-                    runCatching { it.close() }
-                    activeTun = null
-                }
-            } finally {
-                mainHandler.post {
-                    UnifiedVpnService.publishDoubleHopState(this, ConnectionState.DISCONNECTED, null, null)
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
-                }
-            }
-        }, "WireOpen-DoubleHopStop").start()
+            }, "WireOpen-DoubleHopStop")
+            shutdown.start()
+        }
     }
 
     override fun serviceStop() {
