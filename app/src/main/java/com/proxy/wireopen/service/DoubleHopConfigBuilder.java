@@ -55,16 +55,10 @@ public final class DoubleHopConfigBuilder {
         inbounds.add(inbound);
         root.add("inbounds", inbounds);
 
-        JsonArray outbounds = new JsonArray();
-        outbounds.add(buildWireGuardEndpoint(first, "hop1", null));
-        outbounds.add(buildWireGuardEndpoint(second, "hop2", "hop1"));
-
-        JsonObject directOutbound = new JsonObject();
-        directOutbound.addProperty("type", "direct");
-        directOutbound.addProperty("tag", "direct");
-        outbounds.add(directOutbound);
-
-        root.add("outbounds", outbounds);
+        JsonArray endpoints = new JsonArray();
+        endpoints.add(buildWireGuardEndpoint(first, "hop1", null));
+        endpoints.add(buildWireGuardEndpoint(second, "hop2", "hop1"));
+        root.add("endpoints", endpoints);
 
         JsonObject dns = new JsonObject();
         JsonArray servers = new JsonArray();
@@ -73,7 +67,6 @@ public final class DoubleHopConfigBuilder {
         bootstrapDns.addProperty("tag", "dns-bootstrap");
         bootstrapDns.addProperty("type", "udp");
         bootstrapDns.addProperty("server", "223.5.5.5");
-        bootstrapDns.addProperty("detour", "direct");
 
         JsonObject tunnelDns = new JsonObject();
         tunnelDns.addProperty("tag", "dns-tunnel");
@@ -144,26 +137,37 @@ public final class DoubleHopConfigBuilder {
             throw new IllegalArgumentException("WireGuard 配置缺少私钥、地址、公钥或服务器地址：" + profile.getName());
         }
 
-        JsonObject outbound = new JsonObject();
-        outbound.addProperty("type", "wireguard");
-        outbound.addProperty("tag", tag);
-        outbound.addProperty("server", cfg.getEndpointHost());
-        outbound.addProperty("server_port", cfg.getEndpointPort());
-        outbound.addProperty("private_key", cfg.getPrivateKey());
-        outbound.addProperty("peer_public_key", cfg.getPublicKey());
-        if (cfg.getPresharedKey() != null && !cfg.getPresharedKey().trim().isEmpty()) {
-            outbound.addProperty("pre_shared_key", cfg.getPresharedKey().trim());
-        }
-
+        JsonObject endpoint = new JsonObject();
+        endpoint.addProperty("type", "wireguard");
+        endpoint.addProperty("tag", tag);
+        endpoint.addProperty("system", false);
+        endpoint.addProperty("name", profile.getName());
+        endpoint.addProperty("mtu", cfg.getMtu() > 0 ? cfg.getMtu() : 1400);
+        endpoint.addProperty("private_key", cfg.getPrivateKey());
         JsonArray addresses = new JsonArray();
         for (String address : cfg.getAddresses()) {
             if (address != null && !address.trim().isEmpty()) addresses.add(address.trim());
         }
-        outbound.add("local_address", addresses);
+        endpoint.add("address", addresses);
 
-        if (detour != null) {
-            outbound.addProperty("detour", detour);
+        JsonArray peers = new JsonArray();
+        JsonObject peer = new JsonObject();
+        peer.addProperty("address", cfg.getEndpointHost());
+        peer.addProperty("port", cfg.getEndpointPort());
+        peer.addProperty("public_key", cfg.getPublicKey());
+        if (cfg.getPresharedKey() != null && !cfg.getPresharedKey().trim().isEmpty()) {
+            peer.addProperty("pre_shared_key", cfg.getPresharedKey().trim());
         }
-        return outbound;
+        JsonArray allowedIps = new JsonArray();
+        allowedIps.add("0.0.0.0/0");
+        allowedIps.add("::/0");
+        peer.add("allowed_ips", allowedIps);
+        if (cfg.getPersistentKeepalive() > 0) {
+            peer.addProperty("persistent_keepalive_interval", cfg.getPersistentKeepalive());
+        }
+        peers.add(peer);
+        endpoint.add("peers", peers);
+        if (detour != null) endpoint.addProperty("detour", detour);
+        return endpoint;
     }
 }

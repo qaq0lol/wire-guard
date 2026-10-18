@@ -49,23 +49,22 @@ public class DoubleHopConfigBuilderTest {
                 DoubleHopConfigBuilder.build(first, second, "", "")
         ).getAsJsonObject();
 
-        JsonArray outbounds = config.getAsJsonArray("outbounds");
-        assertEquals(3, outbounds.size());
-        assertEquals("hop1", outbounds.get(0).getAsJsonObject().get("tag").getAsString());
-        assertEquals("hop2", outbounds.get(1).getAsJsonObject().get("tag").getAsString());
-        assertEquals("hop1", outbounds.get(1).getAsJsonObject().get("detour").getAsString());
-        assertEquals("direct", outbounds.get(2).getAsJsonObject().get("tag").getAsString());
+        JsonArray endpoints = config.getAsJsonArray("endpoints");
+        assertEquals(2, endpoints.size());
+        assertEquals("hop1", endpoints.get(0).getAsJsonObject().get("tag").getAsString());
+        assertEquals("hop2", endpoints.get(1).getAsJsonObject().get("tag").getAsString());
+        assertEquals("hop1", endpoints.get(1).getAsJsonObject().get("detour").getAsString());
 
-        JsonObject hop1Outbound = outbounds.get(0).getAsJsonObject();
-        assertEquals("first.example.com", hop1Outbound.get("server").getAsString());
-        assertEquals(51820, hop1Outbound.get("server_port").getAsInt());
-        assertEquals(publicKey, hop1Outbound.get("peer_public_key").getAsString());
+        JsonObject hop1Peer = endpoints.get(0).getAsJsonObject().getAsJsonArray("peers").get(0).getAsJsonObject();
+        assertEquals("first.example.com", hop1Peer.get("address").getAsString());
+        assertEquals(51820, hop1Peer.get("port").getAsInt());
 
         JsonArray dnsServers = config.getAsJsonObject("dns").getAsJsonArray("servers");
         assertEquals("dns-bootstrap", dnsServers.get(0).getAsJsonObject().get("tag").getAsString());
         assertEquals("udp", dnsServers.get(0).getAsJsonObject().get("type").getAsString());
         assertEquals("223.5.5.5", dnsServers.get(0).getAsJsonObject().get("server").getAsString());
-        assertEquals("direct", dnsServers.get(0).getAsJsonObject().get("detour").getAsString());
+        assertFalse("Bootstrap DNS must not detour to an empty direct outbound",
+                dnsServers.get(0).getAsJsonObject().has("detour"));
         assertEquals("hop2", dnsServers.get(1).getAsJsonObject().get("detour").getAsString());
         assertEquals("udp", dnsServers.get(1).getAsJsonObject().get("type").getAsString());
         assertEquals("1.1.1.1", dnsServers.get(1).getAsJsonObject().get("server").getAsString());
