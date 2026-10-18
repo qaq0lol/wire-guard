@@ -55,10 +55,10 @@ public final class DoubleHopConfigBuilder {
         inbounds.add(inbound);
         root.add("inbounds", inbounds);
 
-        JsonArray endpoints = new JsonArray();
-        endpoints.add(buildWireGuardEndpoint(first, "hop1", null));
-        endpoints.add(buildWireGuardEndpoint(second, "hop2", "hop1"));
-        root.add("endpoints", endpoints);
+        JsonArray outbounds = new JsonArray();
+        outbounds.add(buildWireGuardEndpoint(first, "hop1", null));
+        outbounds.add(buildWireGuardEndpoint(second, "hop2", "hop1"));
+        root.add("outbounds", outbounds);
 
         JsonObject dns = new JsonObject();
         JsonArray servers = new JsonArray();
@@ -66,13 +66,12 @@ public final class DoubleHopConfigBuilder {
         JsonObject bootstrapDns = new JsonObject();
         bootstrapDns.addProperty("tag", "dns-bootstrap");
         bootstrapDns.addProperty("type", "udp");
-        bootstrapDns.addProperty("address", "223.5.5.5");
-        bootstrapDns.addProperty("strategy", "ipv4_only");
+        bootstrapDns.addProperty("server", "223.5.5.5");
 
         JsonObject tunnelDns = new JsonObject();
         tunnelDns.addProperty("tag", "dns-tunnel");
         tunnelDns.addProperty("type", "udp");
-        tunnelDns.addProperty("address", "1.1.1.1");
+        tunnelDns.addProperty("server", "1.1.1.1");
         tunnelDns.addProperty("detour", "hop2");
 
         servers.add(bootstrapDns);
@@ -149,12 +148,12 @@ public final class DoubleHopConfigBuilder {
         for (String address : cfg.getAddresses()) {
             if (address != null && !address.trim().isEmpty()) addresses.add(address.trim());
         }
-        endpoint.add("address", addresses);
+        endpoint.add("local_address", addresses);
 
         JsonArray peers = new JsonArray();
         JsonObject peer = new JsonObject();
-        peer.addProperty("address", cfg.getEndpointHost());
-        peer.addProperty("port", cfg.getEndpointPort());
+        peer.addProperty("server", cfg.getEndpointHost());
+        peer.addProperty("server_port", cfg.getEndpointPort());
         peer.addProperty("public_key", cfg.getPublicKey());
         if (cfg.getPresharedKey() != null && !cfg.getPresharedKey().trim().isEmpty()) {
             peer.addProperty("pre_shared_key", cfg.getPresharedKey().trim());

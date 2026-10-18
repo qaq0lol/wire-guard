@@ -49,21 +49,25 @@ public class DoubleHopConfigBuilderTest {
                 DoubleHopConfigBuilder.build(first, second, "", "")
         ).getAsJsonObject();
 
-        JsonArray endpoints = config.getAsJsonArray("endpoints");
-        assertEquals(2, endpoints.size());
-        assertEquals("hop1", endpoints.get(0).getAsJsonObject().get("tag").getAsString());
-        assertEquals("hop2", endpoints.get(1).getAsJsonObject().get("tag").getAsString());
-        assertEquals("hop1", endpoints.get(1).getAsJsonObject().get("detour").getAsString());
+        JsonArray outbounds = config.getAsJsonArray("outbounds");
+        assertEquals(2, outbounds.size());
+        assertEquals("hop1", outbounds.get(0).getAsJsonObject().get("tag").getAsString());
+        assertEquals("hop2", outbounds.get(1).getAsJsonObject().get("tag").getAsString());
+        assertEquals("hop1", outbounds.get(1).getAsJsonObject().get("detour").getAsString());
+
+        JsonObject hop1Peer = outbounds.get(0).getAsJsonObject().getAsJsonArray("peers").get(0).getAsJsonObject();
+        assertEquals("first.example.com", hop1Peer.get("server").getAsString());
+        assertEquals(51820, hop1Peer.get("server_port").getAsInt());
 
         JsonArray dnsServers = config.getAsJsonObject("dns").getAsJsonArray("servers");
         assertEquals("dns-bootstrap", dnsServers.get(0).getAsJsonObject().get("tag").getAsString());
         assertEquals("udp", dnsServers.get(0).getAsJsonObject().get("type").getAsString());
-        assertEquals("223.5.5.5", dnsServers.get(0).getAsJsonObject().get("address").getAsString());
+        assertEquals("223.5.5.5", dnsServers.get(0).getAsJsonObject().get("server").getAsString());
         assertFalse("Bootstrap DNS must not detour to an empty direct outbound",
                 dnsServers.get(0).getAsJsonObject().has("detour"));
         assertEquals("hop2", dnsServers.get(1).getAsJsonObject().get("detour").getAsString());
         assertEquals("udp", dnsServers.get(1).getAsJsonObject().get("type").getAsString());
-        assertEquals("1.1.1.1", dnsServers.get(1).getAsJsonObject().get("address").getAsString());
+        assertEquals("1.1.1.1", dnsServers.get(1).getAsJsonObject().get("server").getAsString());
 
         JsonObject route = config.getAsJsonObject("route");
         assertEquals("dns-bootstrap", route.get("default_domain_resolver").getAsString());
