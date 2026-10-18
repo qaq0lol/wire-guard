@@ -13,6 +13,7 @@ import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.google.gson.JsonParser
 import io.nekohasekai.libbox.CommandServer
 import io.nekohasekai.libbox.CommandServerHandler
 import io.nekohasekai.libbox.Libbox
@@ -134,6 +135,7 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
 
     private fun startCore(content: String, token: Int) {
         try {
+            validateDoubleHopConfig(content)
             LogManager.info("DoubleHopVpnService", "启动阶段 1/4：初始化 sing-box")
             initializeLibbox()
             if (!isStartupCurrent(token)) return
@@ -199,6 +201,32 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
             Log.e("DoubleHopVpnService", "Fatal error while starting double-hop core", t)
             fail(t.message ?: "双跳启动发生严重错误")
         }
+    }
+
+    private fun validateDoubleHopConfig(content: String) {
+        val root = JsonParser.parseString(content).asJsonObject
+        val endpoints = root.getAsJsonArray("endpoints")
+        val outbounds = root.getAsJsonArray("outbounds")
+        val endpointCount = endpoints?.size() ?: 0
+        val outboundCount = outbounds?.size() ?: 0
+
+        if (endpointCount != 2) {
+            throw IllegalArgumentException(
+                "双跳配置版本不兼容：需要根级 endpoints 数组且包含两个节点，当前 endpoints=$endpointCount、outbounds=$outboundCount。请安装 v1.3.1 后重新选择节点。"
+            )
+        }
+
+        val legacyWireGuardOutbound = outbounds?.any { item ->
+            runCatching { item.asJsonObject.get("type")?.asString == "wireguard" }.getOrDefault(false)
+        } == true
+        if (legacyWireGuardOutbound) {
+            throw IllegalArgumentException("检测到旧版 WireGuard outbound 配置，请安装 v1.3.1 后重新选择双跳节点。")
+        }
+
+        LogManager.info(
+            "DoubleHopVpnService",
+            "双跳配置结构校验通过：endpoints=$endpointCount、outbounds=$outboundCount"
+        )
     }
 
     private fun isStartupCurrent(token: Int): Boolean =
