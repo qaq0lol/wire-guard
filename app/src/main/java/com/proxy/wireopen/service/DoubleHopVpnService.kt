@@ -42,13 +42,9 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
         private const val NOTIFICATION_ID = 1002
         private const val STARTUP_TIMEOUT_MS = 30_000L
         private const val STOP_FORCE_CLOSE_DELAY_MS = 2_500L
+        private val resourceLock = Any()
         @Volatile private var libboxInitialized = false
         @Volatile private var activeTun: ParcelFileDescriptor? = null
-
-        internal fun setTunDescriptor(descriptor: ParcelFileDescriptor) {
-            activeTun?.let { runCatching { it.close() } }
-            activeTun = descriptor
-        }
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -59,7 +55,19 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     @Volatile private var startupFinished = false
     @Volatile private var starting = false
     @Volatile private var commandServer: CommandServer? = null
+    @Volatile private var platformInterface: DoubleHopPlatform? = null
     private var configText: String? = null
+
+    internal fun setTunDescriptor(descriptor: ParcelFileDescriptor) {
+        synchronized(resourceLock) {
+            if (stopOnce.get()) {
+                runCatching { descriptor.close() }
+                throw IllegalStateException("双跳连接已取消，拒绝注册迟到的 TUN")
+            }
+            activeTun?.let { runCatching { it.close() } }
+            activeTun = descriptor
+        }
+    }
 
     private val startupTimeoutRunnable = Runnable {
         if (starting && !startupFinished && !stopOnce.get()) {
@@ -86,6 +94,10 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
                 val content = intent.getStringExtra(EXTRA_CONFIG)
                 if (content.isNullOrBlank()) {
                     fail("双跳配置为空")
+                    return START_NOT_STICKY
+                }
+                if (cleanupStarted.get() && stopOnce.get()) {
+                    LogManager.warn("DoubleHopVpnService", "上一次双跳仍在清理，忽略重复启动请求")
                     return START_NOT_STICKY
                 }
                 configText = content
@@ -121,25 +133,43 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     }
 
     private fun startCore(content: String, token: Int) {
-        var server: CommandServer? = null
         try {
             LogManager.info("DoubleHopVpnService", "启动阶段 1/4：初始化 sing-box")
             initializeLibbox()
             if (!isStartupCurrent(token)) return
 
             LogManager.info("DoubleHopVpnService", "启动阶段 2/4：创建命令服务")
-            server = CommandServer(this, DoubleHopPlatform(this))
-            commandServer = server
+            val platform = DoubleHopPlatform(this)
+            val createdServer = CommandServer(this, platform)
+            val registered = synchronized(resourceLock) {
+                if (!isStartupCurrent(token)) {
+                    false
+                } else {
+                    commandServer = createdServer
+                    platformInterface = platform
+                    true
+                }
+            }
+            if (!registered) {
+                platform.shutdown()
+                runCatching { createdServer.close() }
+                LogManager.warn("DoubleHopVpnService", "启动已取消，已释放尚未注册的命令服务")
+                return
+            }
 
+            if (!isStartupCurrent(token)) {
+                LogManager.warn("DoubleHopVpnService", "命令服务启动前连接已取消")
+                return
+            }
             LogManager.info("DoubleHopVpnService", "启动阶段 3/4：启动命令服务")
-            server.start()
+            createdServer.start()
             if (!isStartupCurrent(token)) {
                 LogManager.warn("DoubleHopVpnService", "命令服务启动后发现连接已取消")
                 return
             }
 
             LogManager.info("DoubleHopVpnService", "启动阶段 4/4：加载双跳配置并建立 TUN")
-            server.startOrReloadService(content, OverrideOptions())
+            createdServer.startOrReloadService(content, OverrideOptions())
 
             if (!isStartupCurrent(token)) {
                 LogManager.warn("DoubleHopVpnService", "启动返回时连接已取消，丢弃过期启动结果")
@@ -271,13 +301,25 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
         startupGeneration.incrementAndGet()
         mainHandler.removeCallbacks(startupTimeoutRunnable)
 
-        val server = commandServer
-        commandServer = null
-        val tun = activeTun
-        activeTun = null
+        val resources = synchronized(resourceLock) {
+            val server = commandServer
+            commandServer = null
+            val platform = platformInterface
+            platformInterface = null
+            val tun = activeTun
+            activeTun = null
+            Triple(server, platform, tun)
+        }
+        val server = resources.first
+        val platform = resources.second
+        val tun = resources.third
 
-        // Drop the system VPN interface and publish the disconnected state before
-        // calling libbox shutdown. Native close methods may block during a failed startup.
+        // Unregister network callbacks and drop the TUN before native shutdown.
+        // Native close methods may block during a failed startup.
+        runCatching { platform?.shutdown() }
+            .onFailure {
+                LogManager.warn("DoubleHopVpnService", "释放底层网络监听失败：" + (it.message ?: "未知错误"))
+            }
         if (tun != null) {
             runCatching { tun.close() }
                 .onFailure { LogManager.warn("DoubleHopVpnService", "关闭 TUN 失败：" + (it.message ?: "未知错误")) }
@@ -353,7 +395,7 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
 
     override fun onDestroy() {
-        if (starting || commandServer != null || activeTun != null) stopTunnel()
+        if (starting || commandServer != null || platformInterface != null || activeTun != null) stopTunnel()
         super.onDestroy()
     }
 }

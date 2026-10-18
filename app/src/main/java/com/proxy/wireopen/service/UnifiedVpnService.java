@@ -496,7 +496,8 @@ public class UnifiedVpnService extends VpnService {
             doubleHopManaged = false;
         } else if (state == ConnectionState.CONNECTING
                 || state == ConnectionState.CONNECTED
-                || state == ConnectionState.DISCONNECTING) {
+                || state == ConnectionState.DISCONNECTING
+                || (state == ConnectionState.ERROR && profile != null)) {
             doubleHopManaged = true;
         } else {
             doubleHopManaged = false;

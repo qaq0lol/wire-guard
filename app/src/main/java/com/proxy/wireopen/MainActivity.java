@@ -3058,6 +3058,7 @@ public class MainActivity extends AppCompatActivity {
 
         boolean isConnectedOrConnecting = state == ConnectionState.CONNECTED
                 || state == ConnectionState.CONNECTING
+                || (state == ConnectionState.ERROR && UnifiedVpnService.isDoubleHopManaged())
                 || lastConnectionState == ConnectionState.CONNECTED
                 || lastConnectionState == ConnectionState.CONNECTING;
 
