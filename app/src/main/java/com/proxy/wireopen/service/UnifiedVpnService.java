@@ -47,6 +47,7 @@ public class UnifiedVpnService extends VpnService {
     private static volatile String lastErrorMessage = null;
     private static volatile ProxyProfile currentProfile = null;
     private static volatile boolean isOpenVpnHandoff = false;
+    private static volatile boolean doubleHopManaged = false;
     private static volatile long tunnelGeneration = 0L;
     private static volatile ProtocolType lastRunningProtocol = null;
     private static volatile long lastEngineStopTime = 0L;
@@ -79,9 +80,32 @@ public class UnifiedVpnService extends VpnService {
         if (ACTION_START_VPN.equals(action)) {
             ProxyProfile profile = (ProxyProfile) intent.getSerializableExtra(EXTRA_PROFILE);
             if (profile != null) {
-                handleStartVpn(profile);
+                if (doubleHopManaged) {
+                    Intent stopDoubleHop = new Intent(this, DoubleHopVpnService.class);
+                    stopDoubleHop.setAction(DoubleHopVpnService.ACTION_STOP);
+                    startService(stopDoubleHop);
+                    new Thread(() -> {
+                        long deadline = System.currentTimeMillis() + 3000L;
+                        while (doubleHopManaged && System.currentTimeMillis() < deadline) {
+                            try { Thread.sleep(100L); } catch (InterruptedException ignored) {
+                                Thread.currentThread().interrupt();
+                                return;
+                            }
+                        }
+                        handleStartVpn(profile);
+                    }, "WireOpen-DoubleHopHandoff").start();
+                } else {
+                    handleStartVpn(profile);
+                }
             }
         } else if (ACTION_STOP_VPN.equals(action)) {
+            if (doubleHopManaged) {
+                Intent stopDoubleHop = new Intent(this, DoubleHopVpnService.class);
+                stopDoubleHop.setAction(DoubleHopVpnService.ACTION_STOP);
+                startService(stopDoubleHop);
+                stopSelf(startId);
+                return START_NOT_STICKY;
+            }
             stopTunnel();
         }
         return START_NOT_STICKY;
@@ -92,6 +116,7 @@ public class UnifiedVpnService extends VpnService {
     }
 
     private synchronized void handleStartVpn(ProxyProfile profile) {
+        doubleHopManaged = false;
         final long generation = ++tunnelGeneration;
         isOpenVpnHandoff = false;
 
@@ -340,6 +365,12 @@ public class UnifiedVpnService extends VpnService {
     }
 
     private synchronized void stopTunnel() {
+        if (doubleHopManaged) {
+            Intent stopDoubleHop = new Intent(this, DoubleHopVpnService.class);
+            stopDoubleHop.setAction(DoubleHopVpnService.ACTION_STOP);
+            startService(stopDoubleHop);
+            return;
+        }
         ++tunnelGeneration;
         isOpenVpnHandoff = false;
 
@@ -417,7 +448,7 @@ public class UnifiedVpnService extends VpnService {
         }
 
         // Avoid recursive stopTunnel() from onDestroy after an explicit stop.
-        if (currentState != ConnectionState.DISCONNECTED) {
+        if (currentState != ConnectionState.DISCONNECTED && !doubleHopManaged) {
             stopTunnel();
         }
         super.onDestroy();
@@ -449,6 +480,43 @@ public class UnifiedVpnService extends VpnService {
             intent.putExtra(EXTRA_ERROR_MESSAGE, errorMessage);
         }
         sendBroadcast(intent);
+    }
+
+    /**
+     * Shares the double-hop service state with the existing dashboard and stop button.
+     * The double-hop runtime owns its own TUN and engine; this service only mirrors state.
+     */
+    public static synchronized void publishDoubleHopState(
+            Context context, ConnectionState state, String errorMessage, ProxyProfile profile) {
+        if (context == null || state == null) return;
+        currentState = state;
+        if (profile != null) currentProfile = profile;
+        if (state == ConnectionState.DISCONNECTED) {
+            currentProfile = null;
+            doubleHopManaged = false;
+        } else if (state == ConnectionState.CONNECTING
+                || state == ConnectionState.CONNECTED
+                || state == ConnectionState.DISCONNECTING) {
+            doubleHopManaged = true;
+        } else {
+            doubleHopManaged = false;
+        }
+        if (state == ConnectionState.ERROR) {
+            lastErrorMessage = errorMessage;
+        } else if (state == ConnectionState.CONNECTED) {
+            lastErrorMessage = null;
+        }
+        Intent intent = new Intent(ACTION_STATE_CHANGED);
+        intent.setPackage(context.getPackageName());
+        intent.putExtra(EXTRA_STATE, state.name());
+        if (errorMessage != null && !errorMessage.trim().isEmpty()) {
+            intent.putExtra(EXTRA_ERROR_MESSAGE, errorMessage);
+        }
+        context.sendBroadcast(intent);
+    }
+
+    public static boolean isDoubleHopManaged() {
+        return doubleHopManaged;
     }
 
     private void broadcastTraffic(long rxBytes, long txBytes) {
