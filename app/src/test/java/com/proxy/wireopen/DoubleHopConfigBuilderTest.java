@@ -56,9 +56,10 @@ public class DoubleHopConfigBuilderTest {
         assertEquals("hop1", outbounds.get(1).getAsJsonObject().get("detour").getAsString());
         assertEquals("direct", outbounds.get(2).getAsJsonObject().get("tag").getAsString());
 
-        JsonObject hop1Peer = outbounds.get(0).getAsJsonObject().getAsJsonArray("peers").get(0).getAsJsonObject();
-        assertEquals("first.example.com", hop1Peer.get("server").getAsString());
-        assertEquals(51820, hop1Peer.get("server_port").getAsInt());
+        JsonObject hop1Outbound = outbounds.get(0).getAsJsonObject();
+        assertEquals("first.example.com", hop1Outbound.get("server").getAsString());
+        assertEquals(51820, hop1Outbound.get("server_port").getAsInt());
+        assertEquals(publicKey, hop1Outbound.get("peer_public_key").getAsString());
 
         JsonArray dnsServers = config.getAsJsonObject("dns").getAsJsonArray("servers");
         assertEquals("dns-bootstrap", dnsServers.get(0).getAsJsonObject().get("tag").getAsString());

@@ -144,34 +144,26 @@ public final class DoubleHopConfigBuilder {
             throw new IllegalArgumentException("WireGuard 配置缺少私钥、地址、公钥或服务器地址：" + profile.getName());
         }
 
-        JsonObject endpoint = new JsonObject();
-        endpoint.addProperty("type", "wireguard");
-        endpoint.addProperty("tag", tag);
-        endpoint.addProperty("private_key", cfg.getPrivateKey());
+        JsonObject outbound = new JsonObject();
+        outbound.addProperty("type", "wireguard");
+        outbound.addProperty("tag", tag);
+        outbound.addProperty("server", cfg.getEndpointHost());
+        outbound.addProperty("server_port", cfg.getEndpointPort());
+        outbound.addProperty("private_key", cfg.getPrivateKey());
+        outbound.addProperty("peer_public_key", cfg.getPublicKey());
+        if (cfg.getPresharedKey() != null && !cfg.getPresharedKey().trim().isEmpty()) {
+            outbound.addProperty("pre_shared_key", cfg.getPresharedKey().trim());
+        }
+
         JsonArray addresses = new JsonArray();
         for (String address : cfg.getAddresses()) {
             if (address != null && !address.trim().isEmpty()) addresses.add(address.trim());
         }
-        endpoint.add("local_address", addresses);
+        outbound.add("local_address", addresses);
 
-        JsonArray peers = new JsonArray();
-        JsonObject peer = new JsonObject();
-        peer.addProperty("server", cfg.getEndpointHost());
-        peer.addProperty("server_port", cfg.getEndpointPort());
-        peer.addProperty("public_key", cfg.getPublicKey());
-        if (cfg.getPresharedKey() != null && !cfg.getPresharedKey().trim().isEmpty()) {
-            peer.addProperty("pre_shared_key", cfg.getPresharedKey().trim());
+        if (detour != null) {
+            outbound.addProperty("detour", detour);
         }
-        JsonArray allowedIps = new JsonArray();
-        allowedIps.add("0.0.0.0/0");
-        allowedIps.add("::/0");
-        peer.add("allowed_ips", allowedIps);
-        if (cfg.getPersistentKeepalive() > 0) {
-            peer.addProperty("persistent_keepalive", cfg.getPersistentKeepalive());
-        }
-        peers.add(peer);
-        endpoint.add("peers", peers);
-        if (detour != null) endpoint.addProperty("detour", detour);
-        return endpoint;
+        return outbound;
     }
 }
