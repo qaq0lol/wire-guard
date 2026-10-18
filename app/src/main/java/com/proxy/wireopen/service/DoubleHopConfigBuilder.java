@@ -60,6 +60,15 @@ public final class DoubleHopConfigBuilder {
         endpoints.add(buildWireGuardEndpoint(second, "hop2", "hop1"));
         root.add("endpoints", endpoints);
 
+        // Bootstrap DNS must bypass hop2 to avoid a DNS-resolution loop while
+        // the first WireGuard endpoint is resolving its server hostname.
+        JsonArray outbounds = new JsonArray();
+        JsonObject directOutbound = new JsonObject();
+        directOutbound.addProperty("type", "direct");
+        directOutbound.addProperty("tag", "direct");
+        outbounds.add(directOutbound);
+        root.add("outbounds", outbounds);
+
         JsonObject dns = new JsonObject();
         JsonArray servers = new JsonArray();
 
@@ -67,6 +76,7 @@ public final class DoubleHopConfigBuilder {
         bootstrapDns.addProperty("tag", "dns-bootstrap");
         bootstrapDns.addProperty("type", "udp");
         bootstrapDns.addProperty("server", "223.5.5.5");
+        bootstrapDns.addProperty("detour", "direct");
 
         JsonObject tunnelDns = new JsonObject();
         tunnelDns.addProperty("tag", "dns-tunnel");
