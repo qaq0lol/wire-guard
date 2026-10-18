@@ -175,6 +175,9 @@ public final class DoubleHopConfigBuilder {
         if (!cfg.isValid()) {
             throw new IllegalArgumentException("OpenVPN 配置缺少服务器地址或端口：" + profile.getName());
         }
+        if ("secret".equalsIgnoreCase(cfg.getTlsAuthTag())) {
+            throw new IllegalArgumentException("双跳暂不支持静态密钥 OpenVPN（secret）配置，请使用 TLS 模式配置");
+        }
         if (cfg.isAuthUserPass() && ((username == null || username.isEmpty())
                 || (password == null || password.isEmpty()))) {
             throw new IllegalArgumentException("OpenVPN 节点需要账号密码，请先填写 OpenVPN 凭据");
