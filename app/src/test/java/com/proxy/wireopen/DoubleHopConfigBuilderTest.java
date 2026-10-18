@@ -69,9 +69,20 @@ public class DoubleHopConfigBuilderTest {
         assertEquals("udp", dnsServers.get(1).getAsJsonObject().get("type").getAsString());
         assertEquals("1.1.1.1", dnsServers.get(1).getAsJsonObject().get("server").getAsString());
 
+        JsonArray outbounds = config.getAsJsonArray("outbounds");
+        assertEquals(1, outbounds.size());
+        assertEquals("direct", outbounds.get(0).getAsJsonObject().get("type").getAsString());
+        assertEquals("direct", outbounds.get(0).getAsJsonObject().get("tag").getAsString());
+
         JsonObject route = config.getAsJsonObject("route");
         assertEquals("dns-bootstrap", route.get("default_domain_resolver").getAsString());
-        assertEquals("hop2", route.get("final").getAsString());
+        assertEquals("direct", route.get("final").getAsString());
+        JsonArray routeRules = route.getAsJsonArray("rules");
+        assertEquals("hijack-dns", routeRules.get(0).getAsJsonObject().get("action").getAsString());
+        JsonObject tunnelRoute = routeRules.get(1).getAsJsonObject();
+        assertEquals("route", tunnelRoute.get("action").getAsString());
+        assertEquals("hop2", tunnelRoute.get("outbound").getAsString());
+        assertEquals("tun-in", tunnelRoute.getAsJsonArray("inbound").get(0).getAsString());
         assertNotNull(config.getAsJsonArray("inbounds"));
     }
 
