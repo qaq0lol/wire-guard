@@ -3062,12 +3062,19 @@ public class MainActivity extends AppCompatActivity {
                 || lastConnectionState == ConnectionState.CONNECTING;
 
         if (isConnectedOrConnecting) {
-            // One unified stop path for both WireGuard and OpenVPN.
-            // OpenVPNService itself is stopped by UnifiedVpnService, preventing
-            // duplicate native disconnect intents and state races.
-            Intent intent = new Intent(this, UnifiedVpnService.class);
-            intent.setAction(UnifiedVpnService.ACTION_STOP_VPN);
-            startService(intent);
+            if (UnifiedVpnService.isDoubleHopManaged()) {
+                // Send the stop request straight to the double-hop owner. The
+                // shared service can be shutting down while libbox is blocked.
+                LogManager.info("MainActivity", "用户请求断开双跳连接");
+                Intent intent = new Intent(this, DoubleHopVpnService.class);
+                intent.setAction(DoubleHopVpnService.ACTION_STOP);
+                startService(intent);
+            } else {
+                // Existing single-hop path for WireGuard and OpenVPN.
+                Intent intent = new Intent(this, UnifiedVpnService.class);
+                intent.setAction(UnifiedVpnService.ACTION_STOP_VPN);
+                startService(intent);
+            }
         } else {
             if (active == null) {
                 Toast.makeText(this, "请先选择或导入一个节点配置", Toast.LENGTH_SHORT).show();
