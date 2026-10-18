@@ -265,10 +265,8 @@ internal class DoubleHopPlatform(private val vpn: DoubleHopVpnService) : Platfor
 
         if (preferredNetwork != null && isUsable(preferredNetwork)) return preferredNetwork
 
-        // If Android reports a VPN interface as active, prefer networks declared underneath it.
-        val underlying = runCatching { vpn.underlyingNetworks }.getOrNull().orEmpty()
-        underlying.firstOrNull(::isUsable)?.let { return it }
-
+        // The active network can be the VPN itself. Exclude VPN transports and choose
+        // the best validated physical interface exposed by ConnectivityManager.
         val candidates = runCatching { cm.allNetworks.toList() }.getOrDefault(emptyList())
             .filter(::isUsable)
         return candidates.maxWithOrNull(
