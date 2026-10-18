@@ -140,9 +140,6 @@ public final class DoubleHopConfigBuilder {
         JsonObject endpoint = new JsonObject();
         endpoint.addProperty("type", "wireguard");
         endpoint.addProperty("tag", tag);
-        endpoint.addProperty("system", false);
-        endpoint.addProperty("name", profile.getName());
-        endpoint.addProperty("mtu", cfg.getMtu() > 0 ? cfg.getMtu() : 1400);
         endpoint.addProperty("private_key", cfg.getPrivateKey());
         JsonArray addresses = new JsonArray();
         for (String address : cfg.getAddresses()) {
