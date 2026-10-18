@@ -21,6 +21,7 @@ import io.nekohasekai.libbox.ShellSession
 import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.libbox.TunOptions
 import io.nekohasekai.libbox.WIFIState
+import com.proxy.wireopen.util.LogManager
 import java.net.Inet6Address
 import java.net.InetSocketAddress
 import java.net.InterfaceAddress
