@@ -60,6 +60,15 @@ public final class DoubleHopConfigBuilder {
         endpoints.add(buildWireGuardEndpoint(second, "hop2", "hop1"));
         root.add("endpoints", endpoints);
 
+        // sing-box requires a normal outbound fallback even when WireGuard is configured
+        // as endpoints. TUN traffic is explicitly routed to hop2 below.
+        JsonArray outbounds = new JsonArray();
+        JsonObject directOutbound = new JsonObject();
+        directOutbound.addProperty("type", "direct");
+        directOutbound.addProperty("tag", "direct");
+        outbounds.add(directOutbound);
+        root.add("outbounds", outbounds);
+
         JsonObject dns = new JsonObject();
         JsonArray servers = new JsonArray();
 
@@ -106,9 +115,19 @@ public final class DoubleHopConfigBuilder {
         dnsRule.addProperty("action", "hijack-dns");
         rules.add(dnsRule);
 
+        // Route DNS to sing-box's DNS router first. All other traffic from the
+        // Android TUN is explicitly sent through the second WireGuard endpoint.
+        JsonObject tunnelRoute = new JsonObject();
+        JsonArray inboundTags = new JsonArray();
+        inboundTags.add("tun-in");
+        tunnelRoute.add("inbound", inboundTags);
+        tunnelRoute.addProperty("action", "route");
+        tunnelRoute.addProperty("outbound", "hop2");
+        rules.add(tunnelRoute);
+
         route.add("rules", rules);
         route.addProperty("default_domain_resolver", "dns-bootstrap");
-        route.addProperty("final", "hop2");
+        route.addProperty("final", "direct");
         root.add("route", route);
 
         return root.toString();
