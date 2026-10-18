@@ -24,6 +24,7 @@ import com.proxy.wireopen.R
 import com.proxy.wireopen.model.ConnectionState
 import com.proxy.wireopen.model.ProxyProfile
 import com.proxy.wireopen.util.LogManager
+import com.proxy.wireopen.util.DoubleHopCrashJournal
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
@@ -81,6 +82,7 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
 
     override fun onCreate() {
         super.onCreate()
+        DoubleHopCrashJournal.restore(this)
         createNotificationChannel()
     }
 
@@ -122,6 +124,7 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
                 startupFinished = false
                 starting = true
                 val token = startupGeneration.incrementAndGet()
+                DoubleHopCrashJournal.begin(this, "启动请求：$firstName → $secondName")
                 UnifiedVpnService.publishDoubleHopState(this, ConnectionState.CONNECTING, null, currentProfile)
                 LogManager.info("DoubleHopVpnService", "双跳启动流程开始：$firstName → $secondName")
                 startForegroundCompat()
@@ -135,14 +138,20 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
 
     private fun startCore(content: String, token: Int) {
         try {
+            DoubleHopCrashJournal.record(this, "阶段 0：开始校验配置，字符数=${content.length}")
             validateDoubleHopConfig(content)
+            DoubleHopCrashJournal.record(this, "阶段 0 完成：配置校验通过")
             LogManager.info("DoubleHopVpnService", "启动阶段 1/4：初始化 sing-box")
+            DoubleHopCrashJournal.record(this, "阶段 1：开始初始化 sing-box")
             initializeLibbox()
+            DoubleHopCrashJournal.record(this, "阶段 1 完成：Libbox.setup 已返回")
             if (!isStartupCurrent(token)) return
 
             LogManager.info("DoubleHopVpnService", "启动阶段 2/4：创建命令服务")
+            DoubleHopCrashJournal.record(this, "阶段 2：创建 DoubleHopPlatform / CommandServer")
             val platform = DoubleHopPlatform(this)
             val createdServer = CommandServer(this, platform)
+            DoubleHopCrashJournal.record(this, "阶段 2 完成：CommandServer 已创建")
             val registered = synchronized(resourceLock) {
                 if (!isStartupCurrent(token)) {
                     false
@@ -164,14 +173,18 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
                 return
             }
             LogManager.info("DoubleHopVpnService", "启动阶段 3/4：启动命令服务")
+            DoubleHopCrashJournal.record(this, "阶段 3：调用 CommandServer.start 前")
             createdServer.start()
+            DoubleHopCrashJournal.record(this, "阶段 3 完成：CommandServer.start 已返回")
             if (!isStartupCurrent(token)) {
                 LogManager.warn("DoubleHopVpnService", "命令服务启动后发现连接已取消")
                 return
             }
 
             LogManager.info("DoubleHopVpnService", "启动阶段 4/4：加载双跳配置并建立 TUN")
+            DoubleHopCrashJournal.record(this, "阶段 4：即将调用原生 startOrReloadService；endpoints=2、DNS bootstrap detour=direct")
             createdServer.startOrReloadService(content, OverrideOptions())
+            DoubleHopCrashJournal.record(this, "阶段 4 完成：原生 startOrReloadService 已正常返回")
 
             if (!isStartupCurrent(token)) {
                 LogManager.warn("DoubleHopVpnService", "启动返回时连接已取消，丢弃过期启动结果")
@@ -192,11 +205,13 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
                 LogManager.warn("DoubleHopVpnService", "已取消的启动线程退出：" + (e.message ?: e.javaClass.simpleName))
                 return
             }
+            DoubleHopCrashJournal.record(this, "Java 异常：" + (e.message ?: e.javaClass.simpleName))
             LogManager.error("DoubleHopVpnService", "双跳启动失败：" + (e.message ?: e.javaClass.simpleName))
             Log.e("DoubleHopVpnService", "Failed to start double-hop core", e)
             fail(e.message ?: "双跳内核启动失败")
         } catch (t: Throwable) {
             if (!isStartupCurrent(token)) return
+            DoubleHopCrashJournal.record(this, "Throwable：" + (t.message ?: t.javaClass.simpleName))
             LogManager.error("DoubleHopVpnService", "双跳启动发生严重错误：" + (t.message ?: t.javaClass.simpleName))
             Log.e("DoubleHopVpnService", "Fatal error while starting double-hop core", t)
             fail(t.message ?: "双跳启动发生严重错误")
@@ -304,6 +319,7 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     }
 
     private fun fail(message: String) {
+        DoubleHopCrashJournal.record(this, "启动失败/触发清理：" + message)
         if (!failurePosted.compareAndSet(false, true)) return
         // Invalidate any startup worker that may return after the timeout.
         startupGeneration.incrementAndGet()
