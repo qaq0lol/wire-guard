@@ -134,7 +134,7 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
             LogManager.info("DoubleHopVpnService", "启动阶段 3/4：启动命令服务")
             server.start()
             if (!isStartupCurrent(token)) {
-                closeServerAsync(server, true)
+                LogManager.warn("DoubleHopVpnService", "命令服务启动后发现连接已取消")
                 return
             }
 
@@ -143,7 +143,6 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
 
             if (!isStartupCurrent(token)) {
                 LogManager.warn("DoubleHopVpnService", "启动返回时连接已取消，丢弃过期启动结果")
-                closeServerAsync(server, true)
                 return
             }
 
@@ -159,7 +158,6 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
         } catch (e: Exception) {
             if (!isStartupCurrent(token)) {
                 LogManager.warn("DoubleHopVpnService", "已取消的启动线程退出：" + (e.message ?: e.javaClass.simpleName))
-                if (server != null) closeServerAsync(server, true)
                 return
             }
             LogManager.error("DoubleHopVpnService", "双跳启动失败：" + (e.message ?: e.javaClass.simpleName))
@@ -175,16 +173,6 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
 
     private fun isStartupCurrent(token: Int): Boolean =
         token == startupGeneration.get() && !stopOnce.get()
-
-    private fun closeServerAsync(server: CommandServer, closeService: Boolean) {
-        Thread({
-            try {
-                if (closeService) runCatching { server.closeService() }
-            } finally {
-                runCatching { server.close() }
-            }
-        }, "WireOpen-DoubleHopStaleClose").start()
-    }
 
     private fun initializeLibbox() {
         synchronized(DoubleHopVpnService::class.java) {
