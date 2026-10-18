@@ -43,7 +43,9 @@ internal class DoubleHopPlatform(private val vpn: VpnService) : PlatformInterfac
     }
 
     override fun openTun(options: TunOptions): Int {
+        LogManager.info("DoubleHopPlatform", "sing-box 请求建立 Android TUN")
         if (VpnService.prepare(vpn) != null) {
+            LogManager.error("DoubleHopPlatform", "建立 TUN 失败：缺少 VPN 授权")
             error("缺少 VPN 授权")
         }
         val builder = vpn.Builder()
@@ -90,8 +92,13 @@ internal class DoubleHopPlatform(private val vpn: VpnService) : PlatformInterfac
             }
         }
 
-        val pfd = builder.establish() ?: error("Android 未能建立双跳 TUN 接口")
+        LogManager.info("DoubleHopPlatform", "Android TUN 路由参数已设置，正在调用 establish()")
+        val pfd = builder.establish() ?: run {
+            LogManager.error("DoubleHopPlatform", "Android Builder.establish() 返回空接口")
+            error("Android 未能建立双跳 TUN 接口")
+        }
         DoubleHopVpnService.setTunDescriptor(pfd)
+        LogManager.info("DoubleHopPlatform", "Android TUN 已建立，fd=${pfd.fd}")
         return pfd.fd
     }
 
