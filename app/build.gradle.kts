@@ -24,6 +24,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Install beside the existing app instead of replacing its data/signature.
+            applicationIdSuffix = ".fix132"
+            versionNameSuffix = "-fix132"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
