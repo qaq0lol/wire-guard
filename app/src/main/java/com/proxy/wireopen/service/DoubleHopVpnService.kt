@@ -198,7 +198,7 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
                 workingPath = working.absolutePath
                 tempPath = cacheDir.absolutePath
                 logMaxLines = 2000
-                debug = false
+                debug = true
             }
             Libbox.setup(options)
             libboxInitialized = true
@@ -365,7 +365,7 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
 
     override fun onDestroy() {
-        if (commandServer != null || activeTun != null) stopTunnel()
+        if (starting || commandServer != null || activeTun != null) stopTunnel()
         super.onDestroy()
     }
 }
