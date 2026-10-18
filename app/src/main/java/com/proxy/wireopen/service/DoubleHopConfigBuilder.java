@@ -187,7 +187,8 @@ public final class DoubleHopConfigBuilder {
         JsonObject endpoint = new JsonObject();
         endpoint.addProperty("type", "openvpn-client");
         endpoint.addProperty("tag", tag);
-        endpoint.addProperty("mode", cfg.getTlsAuthTag() != null && "secret".equals(cfg.getTlsAuthTag()) ? "p2p" : "tls");
+        boolean staticKeyMode = cfg.getTlsAuthTag() != null && "secret".equals(cfg.getTlsAuthTag());
+        endpoint.addProperty("mode", staticKeyMode ? "static_key" : "tls");
         endpoint.addProperty("server", cfg.getRemoteHost());
         endpoint.addProperty("server_port", cfg.getRemotePort());
         endpoint.addProperty("network", "tcp".equalsIgnoreCase(cfg.getProtocol()) ? "tcp" : "udp");
@@ -248,9 +249,9 @@ public final class DoubleHopConfigBuilder {
         if (tlsServerName != null && !tlsServerName.isEmpty()) tls.addProperty("server_name", tlsServerName);
         String remoteCert = findDirective(raw, "remote-cert-tls");
         if (remoteCert != null && !remoteCert.isEmpty()) tls.addProperty("remote_certificate_tls", remoteCert);
-        endpoint.add("tls", tls);
+        if (!staticKeyMode) endpoint.add("tls", tls);
 
-        if ("p2p".equals(endpoint.get("mode").getAsString())) {
+        if (staticKeyMode) {
             if (cfg.getTlsAuthKey() == null || cfg.getTlsAuthKey().trim().isEmpty()) {
                 throw new IllegalArgumentException("静态密钥 OpenVPN 配置缺少内嵌 <secret> 密钥");
             }
