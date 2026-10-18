@@ -28,6 +28,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -35,6 +36,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -76,6 +78,8 @@ import com.proxy.wireopen.repository.ProfileRepository;
 import com.proxy.wireopen.model.PresetPortItem;
 import com.proxy.wireopen.model.PresetRegion;
 import com.proxy.wireopen.repository.PresetRegionManager;
+import com.proxy.wireopen.service.DoubleHopConfigBuilder;
+import com.proxy.wireopen.service.DoubleHopVpnService;
 import com.proxy.wireopen.service.UnifiedVpnService;
 import com.proxy.wireopen.service.IpPureChecker;
 import com.proxy.wireopen.util.CredentialManager;
@@ -224,6 +228,11 @@ public class MainActivity extends AppCompatActivity {
 
     // Launchers
     private ActivityResultLauncher<Intent> vpnPrepareLauncher;
+    private ActivityResultLauncher<Intent> doubleHopPrepareLauncher;
+    private String pendingDoubleHopConfig;
+    private ProxyProfile pendingDoubleHopProfile;
+    private String pendingDoubleHopFirstName;
+    private String pendingDoubleHopSecondName;
     private ActivityResultLauncher<String> filePickerLauncher;
     private ActivityResultLauncher<String> batchFilePickerLauncher;
     private ActivityResultLauncher<String> notificationPermissionLauncher;
@@ -523,6 +532,11 @@ public class MainActivity extends AppCompatActivity {
 
         btnThemeToggle = findViewById(R.id.btn_theme_toggle);
         setupThemeToggle();
+
+        MaterialButton btnDoubleHop = findViewById(R.id.btn_double_hop);
+        if (btnDoubleHop != null) {
+            btnDoubleHop.setOnClickListener(v -> showDoubleHopDialog());
+        }
 
         btnOpenSettings = findViewById(R.id.btn_open_settings);
         if (btnOpenSettings != null) {
@@ -2549,6 +2563,19 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
 
+        doubleHopPrepareLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        startDoubleHopService();
+                    } else {
+                        pendingDoubleHopConfig = null;
+                        pendingDoubleHopProfile = null;
+                        Toast.makeText(this, "用户拒绝了双跳 VPN 授权", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+
         filePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
                 this::handleImportedUri
@@ -2831,22 +2858,224 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+
+    private void showDoubleHopDialog() {
+        ConnectionState state = UnifiedVpnService.getCurrentState();
+        if (state == ConnectionState.CONNECTED || state == ConnectionState.CONNECTING
+                || lastConnectionState == ConnectionState.CONNECTED
+                || lastConnectionState == ConnectionState.CONNECTING) {
+            Toast.makeText(this, "请先断开当前连接，再启动双跳", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        List<ProxyProfile> profiles = repository.getProfiles();
+        if (profiles.size() < 2) {
+            Toast.makeText(this, "至少导入两个节点配置后才能使用双跳", Toast.LENGTH_LONG).show();
+            switchTab(1);
+            return;
+        }
+
+        String[] labels = new String[profiles.size()];
+        for (int i = 0; i < profiles.size(); i++) {
+            ProxyProfile profile = profiles.get(i);
+            String protocol = profile.getProtocolType() == null
+                    ? "未知协议" : profile.getProtocolType().name();
+            labels[i] = profile.getName() + "  [" + protocol + "]";
+        }
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        content.setPadding(padding, padding / 2, padding, 0);
+
+        TextView firstLabel = new TextView(this);
+        firstLabel.setText("第一跳：手机先连接的节点");
+        firstLabel.setTextSize(14);
+        content.addView(firstLabel);
+
+        Spinner firstSpinner = new Spinner(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, labels);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        firstSpinner.setAdapter(adapter);
+        content.addView(firstSpinner);
+
+        TextView secondLabel = new TextView(this);
+        secondLabel.setText("第二跳：最终出口节点");
+        secondLabel.setTextSize(14);
+        LinearLayout.LayoutParams secondLabelParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        secondLabelParams.topMargin = padding / 2;
+        content.addView(secondLabel, secondLabelParams);
+
+        Spinner secondSpinner = new Spinner(this);
+        ArrayAdapter<String> secondAdapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, labels);
+        secondAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        secondSpinner.setAdapter(secondAdapter);
+        secondSpinner.setSelection(1);
+        content.addView(secondSpinner);
+
+        TextView hint = new TextView(this);
+        hint.setText("第二跳的服务器连接会经第一跳传输，系统流量统一从第二跳出站。双跳模式使用独立隧道内核。");
+        hint.setTextSize(12);
+        hint.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+        LinearLayout.LayoutParams hintParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hintParams.topMargin = padding / 2;
+        content.addView(hint, hintParams);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("配置双跳连接")
+                .setView(content)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("连接双跳", (dialog, which) -> {
+                    int firstIndex = firstSpinner.getSelectedItemPosition();
+                    int secondIndex = secondSpinner.getSelectedItemPosition();
+                    if (firstIndex < 0 || secondIndex < 0 || firstIndex >= profiles.size()
+                            || secondIndex >= profiles.size()) {
+                        Toast.makeText(this, "节点选择无效", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    ProxyProfile first = copyProfile(profiles.get(firstIndex));
+                    ProxyProfile second = copyProfile(profiles.get(secondIndex));
+                    if (first.getId() != null && first.getId().equals(second.getId())) {
+                        Toast.makeText(this, "第一跳和第二跳不能使用同一个节点", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    CredentialManager credentials = CredentialManager.getInstance();
+                    boolean needCredentials = DoubleHopConfigBuilder.requiresCredentials(first)
+                            || DoubleHopConfigBuilder.requiresCredentials(second);
+                    if (needCredentials && (credentials == null || !credentials.hasCredentials())) {
+                        showDoubleHopCredentialsDialog(first, second);
+                    } else {
+                        startDoubleHopConnection(first, second);
+                    }
+                })
+                .show();
+    }
+
+    private void showDoubleHopCredentialsDialog(ProxyProfile first, ProxyProfile second) {
+        LinearLayout fields = new LinearLayout(this);
+        fields.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        fields.setPadding(padding, padding / 2, padding, 0);
+
+        EditText username = new EditText(this);
+        username.setSingleLine(true);
+        username.setHint("OpenVPN 用户名");
+        username.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
+        fields.addView(username);
+
+        EditText password = new EditText(this);
+        password.setSingleLine(true);
+        password.setHint("OpenVPN 密码");
+        password.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        fields.addView(password);
+
+        CheckBox saveCredentials = new CheckBox(this);
+        saveCredentials.setText("保存账号密码");
+        fields.addView(saveCredentials);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("双跳的 OpenVPN 凭据")
+                .setMessage("当前双跳共用应用内保存的 OpenVPN 账号密码。")
+                .setView(fields)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("继续", (dialog, which) -> {
+                    String user = username.getText() == null ? "" : username.getText().toString().trim();
+                    String pass = password.getText() == null ? "" : password.getText().toString();
+                    if (user.isEmpty() || pass.isEmpty()) {
+                        Toast.makeText(this, "用户名和密码不能为空", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    CredentialManager manager = CredentialManager.getInstance();
+                    if (manager != null) {
+                        if (saveCredentials.isChecked()) {
+                            manager.saveCredentials(user, pass);
+                        } else {
+                            manager.setTemporaryCredentials(user, pass);
+                        }
+                    }
+                    startDoubleHopConnection(first, second);
+                })
+                .show();
+    }
+
+    private void startDoubleHopConnection(ProxyProfile first, ProxyProfile second) {
+        try {
+            CredentialManager manager = CredentialManager.getInstance();
+            String username = manager != null ? manager.getUsername() : "";
+            String password = manager != null ? manager.getPassword() : "";
+            pendingDoubleHopConfig = DoubleHopConfigBuilder.build(first, second, username, password);
+            pendingDoubleHopProfile = copyProfile(second);
+            pendingDoubleHopFirstName = first.getName();
+            pendingDoubleHopSecondName = second.getName();
+
+            Intent prepareIntent = VpnService.prepare(this);
+            if (prepareIntent != null) {
+                doubleHopPrepareLauncher.launch(prepareIntent);
+            } else {
+                startDoubleHopService();
+            }
+        } catch (Exception e) {
+            LogManager.error("MainActivity", "双跳配置生成失败：" + e.getMessage());
+            Toast.makeText(this, "双跳配置失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void startDoubleHopService() {
+        if (pendingDoubleHopConfig == null || pendingDoubleHopProfile == null) {
+            Toast.makeText(this, "双跳配置已失效，请重新选择节点", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        repository.setActiveProfileId(pendingDoubleHopProfile.getId());
+        Intent intent = new Intent(this, DoubleHopVpnService.class);
+        intent.setAction(DoubleHopVpnService.ACTION_START);
+        intent.putExtra(DoubleHopVpnService.EXTRA_CONFIG, pendingDoubleHopConfig);
+        intent.putExtra(DoubleHopVpnService.EXTRA_FIRST_NAME,
+                pendingDoubleHopFirstName == null ? "第一跳" : pendingDoubleHopFirstName);
+        intent.putExtra(DoubleHopVpnService.EXTRA_SECOND_NAME,
+                pendingDoubleHopSecondName == null ? pendingDoubleHopProfile.getName() : pendingDoubleHopSecondName);
+        intent.putExtra(UnifiedVpnService.EXTRA_PROFILE, pendingDoubleHopProfile);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ContextCompat.startForegroundService(this, intent);
+        } else {
+            startService(intent);
+        }
+        LogManager.info("MainActivity", "请求启动双跳：" + pendingDoubleHopFirstName + " → " + pendingDoubleHopSecondName);
+        pendingDoubleHopConfig = null;
+        pendingDoubleHopProfile = null;
+        pendingDoubleHopFirstName = null;
+        pendingDoubleHopSecondName = null;
+        updateActiveProfileUi();
+    }
+
     private void toggleVpnConnection() {
         ConnectionState state = UnifiedVpnService.getCurrentState();
         ProxyProfile active = repository.getActiveProfile();
 
         boolean isConnectedOrConnecting = state == ConnectionState.CONNECTED
                 || state == ConnectionState.CONNECTING
+                || (state == ConnectionState.ERROR && UnifiedVpnService.isDoubleHopManaged())
                 || lastConnectionState == ConnectionState.CONNECTED
                 || lastConnectionState == ConnectionState.CONNECTING;
 
         if (isConnectedOrConnecting) {
-            // One unified stop path for both WireGuard and OpenVPN.
-            // OpenVPNService itself is stopped by UnifiedVpnService, preventing
-            // duplicate native disconnect intents and state races.
-            Intent intent = new Intent(this, UnifiedVpnService.class);
-            intent.setAction(UnifiedVpnService.ACTION_STOP_VPN);
-            startService(intent);
+            if (UnifiedVpnService.isDoubleHopManaged()) {
+                // Send the stop request straight to the double-hop owner. The
+                // shared service can be shutting down while libbox is blocked.
+                LogManager.info("MainActivity", "用户请求断开双跳连接");
+                Intent intent = new Intent(this, DoubleHopVpnService.class);
+                intent.setAction(DoubleHopVpnService.ACTION_STOP);
+                startService(intent);
+            } else {
+                // Existing single-hop path for WireGuard and OpenVPN.
+                Intent intent = new Intent(this, UnifiedVpnService.class);
+                intent.setAction(UnifiedVpnService.ACTION_STOP_VPN);
+                startService(intent);
+            }
         } else {
             if (active == null) {
                 Toast.makeText(this, "请先选择或导入一个节点配置", Toast.LENGTH_SHORT).show();
