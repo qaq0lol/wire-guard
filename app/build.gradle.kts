@@ -11,8 +11,8 @@ android {
         applicationId = "com.proxy.wireopen"
         minSdk = 26
         targetSdk = 36 // Compatible with Android 16+
-        versionCode = 31
-        versionName = "1.3.0"
+        versionCode = 32
+        versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
