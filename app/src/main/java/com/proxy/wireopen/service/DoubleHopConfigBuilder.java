@@ -82,7 +82,7 @@ public final class DoubleHopConfigBuilder {
         bootstrapDns.addProperty("tag", "dns-bootstrap");
         bootstrapDns.addProperty("server", "1.1.1.1");
         bootstrapDns.addProperty("server_port", 53);
-                dnsServers.add(bootstrapDns);
+        dnsServers.add(bootstrapDns);
 
         JsonObject tunneledDns = new JsonObject();
         tunneledDns.addProperty("type", "udp");
