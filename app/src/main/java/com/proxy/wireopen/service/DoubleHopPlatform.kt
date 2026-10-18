@@ -2,13 +2,10 @@ package com.proxy.wireopen.service
 
 import android.content.Context
 import android.net.ConnectivityManager
-import android.net.IpPrefix
 import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.Build
 import android.system.OsConstants
-import io.nekohasekai.libbox.AutoRedirectHandler
-import io.nekohasekai.libbox.AutoRedirectSession
 import io.nekohasekai.libbox.BridgeOptions
 import io.nekohasekai.libbox.BridgeSession
 import io.nekohasekai.libbox.ConnectionOwner
@@ -144,9 +141,6 @@ internal class DoubleHopPlatform(private val vpn: VpnService) : PlatformInterfac
             item.index = systemInterface.index
             item.mtu = runCatching { systemInterface.mtu }.getOrDefault(0)
             item.dnsServer = StringArray(properties.dnsServers.mapNotNull { it.hostAddress }.iterator())
-            item.dnsSearchDomain = StringArray(
-                properties.domains?.split(' ')?.filter { it.isNotBlank() }.orEmpty().iterator(),
-            )
             item.gateway = StringArray(
                 properties.routes.filter { it.destination.prefixLength == 0 }
                     .mapNotNull { it.gateway }
@@ -199,9 +193,6 @@ internal class DoubleHopPlatform(private val vpn: VpnService) : PlatformInterfac
     override fun tailscaleHostname(): String = "WireOpen"
     override fun usePlatformBridge(): Boolean = false
     override fun createBridge(options: BridgeOptions?): BridgeSession = error("双跳服务不支持系统桥接")
-    override fun usePlatformAutoRedirect(): Boolean = false
-    override fun createAutoRedirect(options: ByteArray?, handler: AutoRedirectHandler?): AutoRedirectSession =
-        error("双跳服务不支持 root 自动重定向")
 
     private fun InterfaceAddress.toPrefix(): String {
         val address = address ?: return ""

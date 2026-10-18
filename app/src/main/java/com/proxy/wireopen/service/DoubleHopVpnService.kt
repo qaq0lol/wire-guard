@@ -19,7 +19,6 @@ import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.OverrideOptions
 import io.nekohasekai.libbox.SetupOptions
 import io.nekohasekai.libbox.SystemProxyStatus
-import com.proxy.wireopen.BuildConfig
 import com.proxy.wireopen.R
 import com.proxy.wireopen.model.ConnectionState
 import com.proxy.wireopen.model.ProxyProfile
@@ -124,7 +123,7 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
                 workingPath = working.absolutePath
                 tempPath = cacheDir.absolutePath
                 logMaxLines = 2000
-                debug = BuildConfig.DEBUG
+                debug = false
             }
             Libbox.setup(options)
             libboxInitialized = true
