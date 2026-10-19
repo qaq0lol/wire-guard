@@ -197,6 +197,10 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
             val nativeContent = prepareNativeConfig(content)
             configText = nativeContent
             DoubleHopCrashJournal.record(this, "阶段 3.5 完成：服务器地址已处理，启动配置不再依赖 bootstrap DNS")
+            if (!isStartupCurrent(token)) {
+                LogManager.warn("DoubleHopVpnService", "预解析服务器地址期间连接已取消，跳过原生启动")
+                return
+            }
             DoubleHopCrashJournal.record(this, "阶段 4：即将调用原生 startOrReloadService；endpoints=2、DNS servers=1")
             createdServer.startOrReloadService(nativeContent, OverrideOptions())
             DoubleHopCrashJournal.record(this, "阶段 4 完成：原生 startOrReloadService 已正常返回")
