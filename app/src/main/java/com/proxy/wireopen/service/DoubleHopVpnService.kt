@@ -435,7 +435,9 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     }
 
     override fun writeDebugMessage(message: String?) {
-        LogManager.debug("sing-box", message ?: "")
+        // Keep the libbox callback minimal. Avoid crossing the native callback
+        // into the synchronized UI log buffer from arbitrary Go runtime threads.
+        Log.d("sing-box", message ?: "")
     }
 
     override fun connectSSHAgent(): Int = -1
