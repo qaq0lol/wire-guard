@@ -52,7 +52,7 @@
                     android:paddingEnd="6dp"
                     android:paddingTop="2dp"
                     android:paddingBottom="2dp"
-                    android:text="v1.3.4"
+                    android:text="v1.3.5"
                     android:fontFamily="monospace"
                     android:textColor="@color/brand_primary"
                     android:textSize="9sp"
