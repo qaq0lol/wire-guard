@@ -7,8 +7,6 @@ import com.proxy.wireopen.model.ProxyProfile;
 import com.proxy.wireopen.model.WireGuardConfig;
 import com.proxy.wireopen.parser.WireGuardConfigParser;
 
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Converts two imported profiles into one sing-box instance for two-hop chaining.
@@ -60,8 +58,9 @@ public final class DoubleHopConfigBuilder {
         endpoints.add(buildWireGuardEndpoint(second, "hop2", "hop1"));
         root.add("endpoints", endpoints);
 
-        // Bootstrap DNS must bypass hop2 to avoid a DNS-resolution loop while
-        // the first WireGuard endpoint is resolving its server hostname.
+        // Resolve WireGuard endpoint hostnames in the Android service before
+        // native startup. Keeping only the tunneled DNS server avoids bringing
+        // up a direct bootstrap DNS transport while sing-box initializes.
         JsonArray outbounds = new JsonArray();
         JsonObject directOutbound = new JsonObject();
         directOutbound.addProperty("type", "direct");
@@ -72,38 +71,14 @@ public final class DoubleHopConfigBuilder {
         JsonObject dns = new JsonObject();
         JsonArray servers = new JsonArray();
 
-        JsonObject bootstrapDns = new JsonObject();
-        bootstrapDns.addProperty("tag", "dns-bootstrap");
-        bootstrapDns.addProperty("type", "udp");
-        bootstrapDns.addProperty("server", "223.5.5.5");
-        bootstrapDns.addProperty("detour", "direct");
-
         JsonObject tunnelDns = new JsonObject();
         tunnelDns.addProperty("tag", "dns-tunnel");
         tunnelDns.addProperty("type", "udp");
         tunnelDns.addProperty("server", "1.1.1.1");
         tunnelDns.addProperty("detour", "hop2");
 
-        servers.add(bootstrapDns);
         servers.add(tunnelDns);
         dns.add("servers", servers);
-
-        JsonArray dnsRules = new JsonArray();
-        List<String> rawHosts = extractServerHosts(first, second);
-        JsonArray domains = new JsonArray();
-        for (String rawHost : rawHosts) {
-            if (rawHost != null && !rawHost.trim().isEmpty() && !isIpAddress(rawHost.trim())) {
-                domains.add(rawHost.trim());
-            }
-        }
-        if (domains.size() > 0) {
-            JsonObject directDnsRule = new JsonObject();
-            directDnsRule.add("domain", domains);
-            directDnsRule.addProperty("server", "dns-bootstrap");
-            dnsRules.add(directDnsRule);
-        }
-
-        dns.add("rules", dnsRules);
         dns.addProperty("final", "dns-tunnel");
         dns.addProperty("independent_cache", true);
         root.add("dns", dns);
@@ -117,28 +92,10 @@ public final class DoubleHopConfigBuilder {
         rules.add(dnsRule);
 
         route.add("rules", rules);
-        route.addProperty("default_domain_resolver", "dns-bootstrap");
         route.addProperty("final", "hop2");
         root.add("route", route);
 
         return root.toString();
-    }
-
-    private static List<String> extractServerHosts(ProxyProfile first, ProxyProfile second) {
-        List<String> hosts = new ArrayList<>();
-        try {
-            WireGuardConfig c1 = WireGuardConfigParser.parse(first.getRawConfig());
-            if (c1.isValid() && c1.getEndpointHost() != null) hosts.add(c1.getEndpointHost());
-        } catch (Exception ignored) {}
-        try {
-            WireGuardConfig c2 = WireGuardConfigParser.parse(second.getRawConfig());
-            if (c2.isValid() && c2.getEndpointHost() != null) hosts.add(c2.getEndpointHost());
-        } catch (Exception ignored) {}
-        return hosts;
-    }
-
-    private static boolean isIpAddress(String text) {
-        return text.matches("^\\d{1,3}(\\.\\d{1,3}){3}$") || text.contains(":");
     }
 
     private static JsonObject buildWireGuardEndpoint(ProxyProfile profile, String tag, String detour) throws Exception {
