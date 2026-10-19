@@ -26,6 +26,8 @@ import com.proxy.wireopen.model.ProxyProfile
 import com.proxy.wireopen.util.LogManager
 import com.proxy.wireopen.util.DoubleHopCrashJournal
 import java.io.File
+import java.net.InetAddress
+import java.net.Inet4Address
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -191,8 +193,12 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
             }
 
             LogManager.info("DoubleHopVpnService", "启动阶段 4/4：加载双跳配置并建立 TUN")
-            DoubleHopCrashJournal.record(this, "阶段 4：即将调用原生 startOrReloadService；endpoints=2、DNS bootstrap detour=direct")
-            createdServer.startOrReloadService(content, OverrideOptions())
+            DoubleHopCrashJournal.record(this, "阶段 3.5：在 Android 层预解析 WireGuard 服务器域名")
+            val nativeContent = prepareNativeConfig(content)
+            configText = nativeContent
+            DoubleHopCrashJournal.record(this, "阶段 3.5 完成：服务器地址已处理，启动配置不再依赖 bootstrap DNS")
+            DoubleHopCrashJournal.record(this, "阶段 4：即将调用原生 startOrReloadService；endpoints=2、DNS servers=1")
+            createdServer.startOrReloadService(nativeContent, OverrideOptions())
             DoubleHopCrashJournal.record(this, "阶段 4 完成：原生 startOrReloadService 已正常返回")
 
             if (!isStartupCurrent(token)) {
@@ -225,6 +231,67 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
             Log.e("DoubleHopVpnService", "Fatal error while starting double-hop core", t)
             fail(t.message ?: "双跳启动发生严重错误")
         }
+    }
+
+    /**
+     * Resolve peer hostnames before native sing-box initialization. This prevents
+     * WireGuard endpoints from requiring a bootstrap DNS transport while the
+     * service's endpoint dependency graph is being created.
+     */
+    private fun prepareNativeConfig(content: String): String {
+        val root = JsonParser.parseString(content).asJsonObject
+        val endpoints = root.getAsJsonArray("endpoints")
+            ?: throw IllegalArgumentException("双跳配置缺少 endpoints")
+        var resolvedCount = 0
+        for (endpointElement in endpoints) {
+            val endpoint = endpointElement.asJsonObject
+            val peers = endpoint.getAsJsonArray("peers") ?: continue
+            for (peerElement in peers) {
+                val peer = peerElement.asJsonObject
+                val host = runCatching { peer.get("address")?.asString?.trim() }.getOrNull()
+                    ?.takeIf { it.isNotEmpty() } ?: continue
+                if (isIpLiteral(host)) continue
+
+                DoubleHopCrashJournal.record(this, "解析 WireGuard 服务器域名：$host")
+                val addresses = InetAddress.getAllByName(host)
+                val resolved = addresses.firstOrNull { it is Inet4Address } ?: addresses.firstOrNull()
+                    ?: throw java.net.UnknownHostException("服务器域名没有可用地址：$host")
+                val literal = resolved.hostAddress.substringBefore('%')
+                peer.addProperty("address", literal)
+                resolvedCount++
+                DoubleHopCrashJournal.record(this, "服务器域名解析成功：$host -> $literal")
+            }
+        }
+
+        // Older generated configs may still contain the bootstrap server. Remove it
+        // and its rules, so native startup only initializes tunneled DNS.
+        root.getAsJsonObject("dns")?.let { dns ->
+            dns.getAsJsonArray("servers")?.let { servers ->
+                for (i in servers.size() - 1 downTo 0) {
+                    val tag = runCatching { servers[i].asJsonObject.get("tag")?.asString }.getOrNull()
+                    if (tag == "dns-bootstrap") servers.remove(i)
+                }
+            }
+            dns.getAsJsonArray("rules")?.let { rules ->
+                for (i in rules.size() - 1 downTo 0) {
+                    val serverTag = runCatching { rules[i].asJsonObject.get("server")?.asString }.getOrNull()
+                    if (serverTag == "dns-bootstrap") rules.remove(i)
+                }
+            }
+            if (dns.getAsJsonArray("servers")?.any {
+                    runCatching { it.asJsonObject.get("tag")?.asString == "dns-tunnel" }.getOrDefault(false)
+                } == true) {
+                dns.addProperty("final", "dns-tunnel")
+            }
+        }
+        root.getAsJsonObject("route")?.remove("default_domain_resolver")
+        DoubleHopCrashJournal.record(this, "预处理完成：共预解析 $resolvedCount 个服务器域名")
+        return root.toString()
+    }
+
+    private fun isIpLiteral(host: String): Boolean {
+        if (host.contains(":")) return true
+        return host.matches(Regex("^\\d{1,3}(\\.\\d{1,3}){3}$"))
     }
 
     private fun validateDoubleHopConfig(content: String) {
@@ -435,9 +502,15 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     }
 
     override fun writeDebugMessage(message: String?) {
-        // Keep the libbox callback minimal. Avoid crossing the native callback
-        // into the synchronized UI log buffer from arbitrary Go runtime threads.
-        Log.d("sing-box", message ?: "")
+        // A Go/native process abort cannot be caught by the Kotlin startup worker.
+        // Persist fatal/error diagnostics before returning from the native callback.
+        val line = message ?: ""
+        Log.d("sing-box", line)
+        val lower = line.lowercase(Locale.ROOT)
+        if (listOf("fatal", "panic", "error", "failed", "failure", "start service:", "dns-transport")
+                .any { lower.contains(it) }) {
+            DoubleHopCrashJournal.record(this, "sing-box 原生日志：${line.take(1400)}")
+        }
     }
 
     override fun connectSSHAgent(): Int = -1
