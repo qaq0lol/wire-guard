@@ -64,16 +64,14 @@ public class DoubleHopConfigBuilderTest {
         assertEquals("direct", outbounds.get(0).getAsJsonObject().get("tag").getAsString());
 
         JsonArray dnsServers = config.getAsJsonObject("dns").getAsJsonArray("servers");
-        assertEquals("dns-bootstrap", dnsServers.get(0).getAsJsonObject().get("tag").getAsString());
+        assertEquals(1, dnsServers.size());
+        assertEquals("dns-tunnel", dnsServers.get(0).getAsJsonObject().get("tag").getAsString());
         assertEquals("udp", dnsServers.get(0).getAsJsonObject().get("type").getAsString());
-        assertEquals("223.5.5.5", dnsServers.get(0).getAsJsonObject().get("server").getAsString());
-        assertEquals("direct", dnsServers.get(0).getAsJsonObject().get("detour").getAsString());
-        assertEquals("hop2", dnsServers.get(1).getAsJsonObject().get("detour").getAsString());
-        assertEquals("udp", dnsServers.get(1).getAsJsonObject().get("type").getAsString());
-        assertEquals("1.1.1.1", dnsServers.get(1).getAsJsonObject().get("server").getAsString());
+        assertEquals("1.1.1.1", dnsServers.get(0).getAsJsonObject().get("server").getAsString());
+        assertEquals("hop2", dnsServers.get(0).getAsJsonObject().get("detour").getAsString());
 
         JsonObject route = config.getAsJsonObject("route");
-        assertEquals("dns-bootstrap", route.get("default_domain_resolver").getAsString());
+        assertEquals(false, route.has("default_domain_resolver"));
         assertEquals("hop2", route.get("final").getAsString());
         assertNotNull(config.getAsJsonArray("inbounds"));
     }
