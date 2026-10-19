@@ -24,6 +24,7 @@ import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.libbox.TunOptions
 import io.nekohasekai.libbox.WIFIState
 import com.proxy.wireopen.util.LogManager
+import com.proxy.wireopen.util.DoubleHopCrashJournal
 import java.net.Inet6Address
 import java.net.InetSocketAddress
 import java.net.InterfaceAddress
@@ -50,6 +51,7 @@ internal class DoubleHopPlatform(private val vpn: DoubleHopVpnService) : Platfor
     }
 
     override fun openTun(options: TunOptions): Int {
+        DoubleHopCrashJournal.record(vpn, "阶段 5：进入 PlatformInterface.openTun")
         LogManager.info("DoubleHopPlatform", "sing-box 请求建立 Android TUN")
         if (VpnService.prepare(vpn) != null) {
             LogManager.error("DoubleHopPlatform", "建立 TUN 失败：缺少 VPN 授权")
@@ -100,11 +102,13 @@ internal class DoubleHopPlatform(private val vpn: DoubleHopVpnService) : Platfor
         }
 
         LogManager.info("DoubleHopPlatform", "Android TUN 路由参数已设置，正在调用 establish()")
+        DoubleHopCrashJournal.record(vpn, "阶段 5：即将调用 Android VpnService.Builder.establish()")
         val pfd = builder.establish() ?: run {
             LogManager.error("DoubleHopPlatform", "Android Builder.establish() 返回空接口")
             error("Android 未能建立双跳 TUN 接口")
         }
         vpn.setTunDescriptor(pfd)
+        DoubleHopCrashJournal.record(vpn, "阶段 5 完成：Android TUN 已建立")
         LogManager.info("DoubleHopPlatform", "Android TUN 已建立，fd=${pfd.fd}")
         return pfd.fd
     }
