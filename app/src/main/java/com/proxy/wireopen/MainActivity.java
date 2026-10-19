@@ -228,6 +228,10 @@ public class MainActivity extends AppCompatActivity {
     private ProxyProfile pendingDoubleHopProfile = null;
     private String pendingDoubleHopFirstName = null;
     private String pendingDoubleHopSecondName = null;
+    private final Handler doubleHopHandoffHandler = new Handler(Looper.getMainLooper());
+    private boolean doubleHopHandoffInProgress = false;
+    private long doubleHopHandoffDeadline = 0L;
+    private long doubleHopDisconnectedSince = 0L;
 
     // Launchers
     private ActivityResultLauncher<Intent> vpnPrepareLauncher;
@@ -2976,6 +2980,83 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startDoubleHopService() {
+        if (pendingDoubleHopConfig == null || pendingDoubleHopProfile == null) {
+            Toast.makeText(this, "双跳配置已失效，请重新选择节点", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // A single Android VPN is active per application. Release any current
+        // tunnel before starting the second service, otherwise onRevoke from
+        // UnifiedVpnService can race with the new double-hop startup.
+        if (doubleHopHandoffInProgress) {
+            return;
+        }
+        if (UnifiedVpnService.isDoubleHopManaged()
+                || UnifiedVpnService.getCurrentState() != ConnectionState.DISCONNECTED) {
+            doubleHopHandoffInProgress = true;
+            doubleHopHandoffDeadline = System.currentTimeMillis() + 8000L;
+            doubleHopDisconnectedSince = 0L;
+
+            Intent stopIntent;
+            if (UnifiedVpnService.isDoubleHopManaged()) {
+                stopIntent = new Intent(this, com.proxy.wireopen.service.DoubleHopVpnService.class);
+                stopIntent.setAction(com.proxy.wireopen.service.DoubleHopVpnService.ACTION_STOP);
+            } else {
+                stopIntent = new Intent(this, UnifiedVpnService.class);
+                stopIntent.setAction(UnifiedVpnService.ACTION_STOP_VPN);
+            }
+            try {
+                startService(stopIntent);
+                LogManager.info("MainActivity", "双跳启动前正在释放已有 VPN 隧道");
+                Toast.makeText(this, "正在切换 VPN 隧道…", Toast.LENGTH_SHORT).show();
+                doubleHopHandoffHandler.postDelayed(this::waitForVpnHandoff, 200L);
+            } catch (Exception e) {
+                doubleHopHandoffInProgress = false;
+                LogManager.error("MainActivity", "释放旧 VPN 隧道失败：" + e.getMessage());
+                Toast.makeText(this, "无法释放原 VPN 隧道：" + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
+
+        performDoubleHopServiceStart();
+    }
+
+    private void waitForVpnHandoff() {
+        if (!doubleHopHandoffInProgress || isFinishing()) {
+            doubleHopHandoffInProgress = false;
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        boolean tunnelReleased = !UnifiedVpnService.isDoubleHopManaged()
+                && UnifiedVpnService.getCurrentState() == ConnectionState.DISCONNECTED;
+        if (!tunnelReleased) {
+            doubleHopDisconnectedSince = 0L;
+            if (now >= doubleHopHandoffDeadline) {
+                doubleHopHandoffInProgress = false;
+                LogManager.error("MainActivity", "等待旧 VPN 隧道释放超时，未启动双跳以避免 TUN 冲突");
+                Toast.makeText(this, "原 VPN 隧道未能释放，双跳未启动。请先断开原连接。", Toast.LENGTH_LONG).show();
+                return;
+            }
+            doubleHopHandoffHandler.postDelayed(this::waitForVpnHandoff, 200L);
+            return;
+        }
+
+        if (doubleHopDisconnectedSince == 0L) {
+            doubleHopDisconnectedSince = now;
+        }
+        // Let Android finish closing the previous TUN and deliver onRevoke.
+        if (now - doubleHopDisconnectedSince < 1200L) {
+            doubleHopHandoffHandler.postDelayed(this::waitForVpnHandoff, 200L);
+            return;
+        }
+
+        doubleHopHandoffInProgress = false;
+        doubleHopDisconnectedSince = 0L;
+        performDoubleHopServiceStart();
+    }
+
+    private void performDoubleHopServiceStart() {
         if (pendingDoubleHopConfig == null || pendingDoubleHopProfile == null) {
             Toast.makeText(this, "双跳配置已失效，请重新选择节点", Toast.LENGTH_LONG).show();
             return;
