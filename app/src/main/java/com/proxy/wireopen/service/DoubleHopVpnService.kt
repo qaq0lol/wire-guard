@@ -127,7 +127,16 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
                 DoubleHopCrashJournal.begin(this, "启动请求：$firstName → $secondName")
                 UnifiedVpnService.publishDoubleHopState(this, ConnectionState.CONNECTING, null, currentProfile)
                 LogManager.info("DoubleHopVpnService", "双跳启动流程开始：$firstName → $secondName")
-                startForegroundCompat()
+                try {
+                    startForegroundCompat()
+                } catch (t: Throwable) {
+                    val message = "双跳前台服务启动失败：" + (t.message ?: t.javaClass.simpleName)
+                    DoubleHopCrashJournal.record(this, message)
+                    LogManager.error("DoubleHopVpnService", message)
+                    Log.e("DoubleHopVpnService", message, t)
+                    fail(message)
+                    return START_NOT_STICKY
+                }
                 mainHandler.removeCallbacks(startupTimeoutRunnable)
                 mainHandler.postDelayed(startupTimeoutRunnable, STARTUP_TIMEOUT_MS)
                 Thread({ startCore(content, token) }, "WireOpen-DoubleHopStart").start()
