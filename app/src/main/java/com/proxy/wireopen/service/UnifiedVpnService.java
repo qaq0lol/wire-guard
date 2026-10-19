@@ -425,6 +425,31 @@ public class UnifiedVpnService extends VpnService {
     @Override
     public void onRevoke() {
         LogManager.log("UnifiedVpnService", "系统 VPN 权限接口回调");
+
+        // publishDoubleHopState() updates the shared state before Android
+        // revokes the previous VPN. Do not route this old-service callback to
+        // ACTION_STOP for the newly starting double-hop service.
+        if (doubleHopManaged) {
+            LogManager.info("UnifiedVpnService",
+                    "双跳正在接管 VPN；仅释放旧引擎，保留双跳共享状态");
+            ++tunnelGeneration;
+            IVpnEngine oldEngine = activeEngine;
+            activeEngine = null;
+            isOpenVpnHandoff = false;
+            if (oldEngine != null) {
+                try {
+                    oldEngine.stop();
+                } catch (Exception e) {
+                    LogManager.warn("UnifiedVpnService",
+                            "接管时停止旧 VPN 引擎失败：" + e.getMessage());
+                }
+            }
+            removeForegroundNotification();
+            stopSelf();
+            super.onRevoke();
+            return;
+        }
+
         if (isOpenVpnHandoff
                 || (currentProfile != null
                 && currentProfile.getProtocolType() == ProtocolType.OPENVPN)) {
