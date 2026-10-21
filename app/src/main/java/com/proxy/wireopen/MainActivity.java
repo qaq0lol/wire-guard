@@ -82,6 +82,7 @@ import com.proxy.wireopen.util.CredentialManager;
 import com.proxy.wireopen.util.IpGeoResolver;
 import com.proxy.wireopen.engine.OpenVpnEngine;
 import com.proxy.wireopen.util.LogManager;
+import com.proxy.wireopen.util.DoubleHopCrashJournal;
 import com.proxy.wireopen.util.PortSpeedTester;
 import com.proxy.wireopen.util.RegionDetector;
 import com.proxy.wireopen.util.SplitTunnelManager;
@@ -222,8 +223,19 @@ public class MainActivity extends AppCompatActivity {
     private WebView webviewIppure;
     private boolean ippureWebLoaded = false;
 
+    // Double Hop state
+    private String pendingDoubleHopConfig = null;
+    private ProxyProfile pendingDoubleHopProfile = null;
+    private String pendingDoubleHopFirstName = null;
+    private String pendingDoubleHopSecondName = null;
+    private final Handler doubleHopHandoffHandler = new Handler(Looper.getMainLooper());
+    private boolean doubleHopHandoffInProgress = false;
+    private long doubleHopHandoffDeadline = 0L;
+    private long doubleHopDisconnectedSince = 0L;
+
     // Launchers
     private ActivityResultLauncher<Intent> vpnPrepareLauncher;
+    private ActivityResultLauncher<Intent> doubleHopPrepareLauncher;
     private ActivityResultLauncher<String> filePickerLauncher;
     private ActivityResultLauncher<String> batchFilePickerLauncher;
     private ActivityResultLauncher<String> notificationPermissionLauncher;
@@ -441,6 +453,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        DoubleHopCrashJournal.restore(this);
         setContentView(R.layout.activity_main);
 
         // Android 16 edge-to-edge system bars insets handling
@@ -527,6 +540,11 @@ public class MainActivity extends AppCompatActivity {
         btnOpenSettings = findViewById(R.id.btn_open_settings);
         if (btnOpenSettings != null) {
             btnOpenSettings.setOnClickListener(v -> showSettingsBottomSheet());
+        }
+
+        MaterialButton btnDoubleHop = findViewById(R.id.btn_double_hop);
+        if (btnDoubleHop != null) {
+            btnDoubleHop.setOnClickListener(v -> showDoubleHopDialog());
         }
 
         // Giant Orb Switch Views (Dashboard)
@@ -2549,6 +2567,17 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
 
+        doubleHopPrepareLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        startDoubleHopService();
+                    } else {
+                        Toast.makeText(this, "双跳 VPN 权限授权被拒绝", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+
         filePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
                 this::handleImportedUri
@@ -2831,22 +2860,251 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    private void showDoubleHopDialog() {
+        List<ProxyProfile> allProfiles = repository.getProfiles();
+        List<ProxyProfile> wgProfiles = new ArrayList<>();
+        for (ProxyProfile p : allProfiles) {
+            if (p.getProtocolType() == ProtocolType.WIREGUARD) {
+                wgProfiles.add(p);
+            }
+        }
+
+        if (wgProfiles.size() < 2) {
+            Toast.makeText(this, "至少需要 2 个 WireGuard 节点才能配置双跳连接", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        List<String> labels = new ArrayList<>();
+        for (ProxyProfile p : wgProfiles) {
+            labels.add("⚡ " + RegionDetector.normalizeDisplayName(p.getName()));
+        }
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        content.setPadding(padding, padding / 2, padding, 0);
+
+        TextView firstLabel = new TextView(this);
+        firstLabel.setText("第一跳：入口节点 (WireGuard)");
+        firstLabel.setTextSize(14);
+        firstLabel.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        content.addView(firstLabel);
+
+        android.widget.Spinner firstSpinner = new android.widget.Spinner(this);
+        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, labels);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        firstSpinner.setAdapter(adapter);
+        firstSpinner.setSelection(0);
+        content.addView(firstSpinner);
+
+        TextView secondLabel = new TextView(this);
+        secondLabel.setText("第二跳：最终出口节点 (WireGuard)");
+        secondLabel.setTextSize(14);
+        secondLabel.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        LinearLayout.LayoutParams secondLabelParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        secondLabelParams.topMargin = padding / 2;
+        content.addView(secondLabel, secondLabelParams);
+
+        android.widget.Spinner secondSpinner = new android.widget.Spinner(this);
+        android.widget.ArrayAdapter<String> secondAdapter = new android.widget.ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, labels);
+        secondAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        secondSpinner.setAdapter(secondAdapter);
+        if (labels.size() > 1) {
+            secondSpinner.setSelection(1);
+        }
+        content.addView(secondSpinner);
+
+        TextView hint = new TextView(this);
+        hint.setText("第二跳的服务器连接会经第一跳传输，系统流量统一从第二跳出站，获取第二跳节点的出口 IP。");
+        hint.setTextSize(12);
+        hint.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+        LinearLayout.LayoutParams hintParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hintParams.topMargin = padding / 2;
+        content.addView(hint, hintParams);
+
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
+                .setTitle("🔀 配置 WireGuard 双跳连接")
+                .setView(content)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("启动双跳", (dialog, which) -> {
+                    int firstIndex = firstSpinner.getSelectedItemPosition();
+                    int secondIndex = secondSpinner.getSelectedItemPosition();
+                    if (firstIndex < 0 || secondIndex < 0 || firstIndex >= wgProfiles.size()
+                            || secondIndex >= wgProfiles.size()) {
+                        Toast.makeText(this, "节点选择无效", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    ProxyProfile first = copyProfile(wgProfiles.get(firstIndex));
+                    ProxyProfile second = copyProfile(wgProfiles.get(secondIndex));
+                    if (first.getId() != null && first.getId().equals(second.getId())) {
+                        Toast.makeText(this, "第一跳和第二跳不能使用同一个节点", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    startDoubleHopConnection(first, second);
+                });
+
+        if (UnifiedVpnService.isDoubleHopManaged()
+                && (UnifiedVpnService.getCurrentState() == ConnectionState.CONNECTED
+                    || UnifiedVpnService.getCurrentState() == ConnectionState.CONNECTING)) {
+            builder.setNeutralButton("断开双跳", (dialog, which) -> {
+                Intent intent = new Intent(this, com.proxy.wireopen.service.DoubleHopVpnService.class);
+                intent.setAction(com.proxy.wireopen.service.DoubleHopVpnService.ACTION_STOP);
+                startService(intent);
+            });
+        }
+
+        builder.show();
+    }
+
+    private void startDoubleHopConnection(ProxyProfile first, ProxyProfile second) {
+        try {
+            pendingDoubleHopConfig = com.proxy.wireopen.service.DoubleHopConfigBuilder.build(first, second, "", "");
+            pendingDoubleHopProfile = copyProfile(second);
+            pendingDoubleHopFirstName = first.getName();
+            pendingDoubleHopSecondName = second.getName();
+
+            Intent prepareIntent = VpnService.prepare(this);
+            if (prepareIntent != null) {
+                doubleHopPrepareLauncher.launch(prepareIntent);
+            } else {
+                startDoubleHopService();
+            }
+        } catch (Exception e) {
+            LogManager.error("MainActivity", "双跳配置生成失败：" + e.getMessage());
+            Toast.makeText(this, "双跳配置失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void startDoubleHopService() {
+        if (pendingDoubleHopConfig == null || pendingDoubleHopProfile == null) {
+            Toast.makeText(this, "双跳配置已失效，请重新选择节点", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // A single Android VPN is active per application. Release any current
+        // tunnel before starting the second service, otherwise onRevoke from
+        // UnifiedVpnService can race with the new double-hop startup.
+        if (doubleHopHandoffInProgress) {
+            return;
+        }
+        if (UnifiedVpnService.isDoubleHopManaged()
+                || UnifiedVpnService.getCurrentState() != ConnectionState.DISCONNECTED) {
+            doubleHopHandoffInProgress = true;
+            doubleHopHandoffDeadline = System.currentTimeMillis() + 8000L;
+            doubleHopDisconnectedSince = 0L;
+
+            Intent stopIntent;
+            if (UnifiedVpnService.isDoubleHopManaged()) {
+                stopIntent = new Intent(this, com.proxy.wireopen.service.DoubleHopVpnService.class);
+                stopIntent.setAction(com.proxy.wireopen.service.DoubleHopVpnService.ACTION_STOP);
+            } else {
+                stopIntent = new Intent(this, UnifiedVpnService.class);
+                stopIntent.setAction(UnifiedVpnService.ACTION_STOP_VPN);
+            }
+            try {
+                startService(stopIntent);
+                LogManager.info("MainActivity", "双跳启动前正在释放已有 VPN 隧道");
+                Toast.makeText(this, "正在切换 VPN 隧道…", Toast.LENGTH_SHORT).show();
+                doubleHopHandoffHandler.postDelayed(this::waitForVpnHandoff, 200L);
+            } catch (Exception e) {
+                doubleHopHandoffInProgress = false;
+                LogManager.error("MainActivity", "释放旧 VPN 隧道失败：" + e.getMessage());
+                Toast.makeText(this, "无法释放原 VPN 隧道：" + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
+
+        performDoubleHopServiceStart();
+    }
+
+    private void waitForVpnHandoff() {
+        if (!doubleHopHandoffInProgress || isFinishing()) {
+            doubleHopHandoffInProgress = false;
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        boolean tunnelReleased = !UnifiedVpnService.isDoubleHopManaged()
+                && UnifiedVpnService.getCurrentState() == ConnectionState.DISCONNECTED;
+        if (!tunnelReleased) {
+            doubleHopDisconnectedSince = 0L;
+            if (now >= doubleHopHandoffDeadline) {
+                doubleHopHandoffInProgress = false;
+                LogManager.error("MainActivity", "等待旧 VPN 隧道释放超时，未启动双跳以避免 TUN 冲突");
+                Toast.makeText(this, "原 VPN 隧道未能释放，双跳未启动。请先断开原连接。", Toast.LENGTH_LONG).show();
+                return;
+            }
+            doubleHopHandoffHandler.postDelayed(this::waitForVpnHandoff, 200L);
+            return;
+        }
+
+        if (doubleHopDisconnectedSince == 0L) {
+            doubleHopDisconnectedSince = now;
+        }
+        // Let Android finish closing the previous TUN and deliver onRevoke.
+        if (now - doubleHopDisconnectedSince < 1200L) {
+            doubleHopHandoffHandler.postDelayed(this::waitForVpnHandoff, 200L);
+            return;
+        }
+
+        doubleHopHandoffInProgress = false;
+        doubleHopDisconnectedSince = 0L;
+        performDoubleHopServiceStart();
+    }
+
+    private void performDoubleHopServiceStart() {
+        if (pendingDoubleHopConfig == null || pendingDoubleHopProfile == null) {
+            Toast.makeText(this, "双跳配置已失效，请重新选择节点", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        repository.setActiveProfileId(pendingDoubleHopProfile.getId());
+        Intent intent = new Intent(this, com.proxy.wireopen.service.DoubleHopVpnService.class);
+        intent.setAction(com.proxy.wireopen.service.DoubleHopVpnService.ACTION_START);
+        intent.putExtra(com.proxy.wireopen.service.DoubleHopVpnService.EXTRA_CONFIG, pendingDoubleHopConfig);
+        intent.putExtra(com.proxy.wireopen.service.DoubleHopVpnService.EXTRA_FIRST_NAME,
+                pendingDoubleHopFirstName == null ? "第一跳" : pendingDoubleHopFirstName);
+        intent.putExtra(com.proxy.wireopen.service.DoubleHopVpnService.EXTRA_SECOND_NAME,
+                pendingDoubleHopSecondName == null ? pendingDoubleHopProfile.getName() : pendingDoubleHopSecondName);
+        intent.putExtra(UnifiedVpnService.EXTRA_PROFILE, pendingDoubleHopProfile);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ContextCompat.startForegroundService(this, intent);
+        } else {
+            startService(intent);
+        }
+        LogManager.info("MainActivity", "请求启动双跳：" + pendingDoubleHopFirstName + " → " + pendingDoubleHopSecondName);
+        pendingDoubleHopConfig = null;
+        pendingDoubleHopProfile = null;
+        pendingDoubleHopFirstName = null;
+        pendingDoubleHopSecondName = null;
+        updateActiveProfileUi();
+    }
+
     private void toggleVpnConnection() {
         ConnectionState state = UnifiedVpnService.getCurrentState();
         ProxyProfile active = repository.getActiveProfile();
 
         boolean isConnectedOrConnecting = state == ConnectionState.CONNECTED
                 || state == ConnectionState.CONNECTING
+                || (state == ConnectionState.ERROR && UnifiedVpnService.isDoubleHopManaged())
                 || lastConnectionState == ConnectionState.CONNECTED
                 || lastConnectionState == ConnectionState.CONNECTING;
 
         if (isConnectedOrConnecting) {
-            // One unified stop path for both WireGuard and OpenVPN.
-            // OpenVPNService itself is stopped by UnifiedVpnService, preventing
-            // duplicate native disconnect intents and state races.
-            Intent intent = new Intent(this, UnifiedVpnService.class);
-            intent.setAction(UnifiedVpnService.ACTION_STOP_VPN);
-            startService(intent);
+            if (UnifiedVpnService.isDoubleHopManaged()) {
+                LogManager.info("MainActivity", "用户请求断开双跳连接");
+                Intent intent = new Intent(this, com.proxy.wireopen.service.DoubleHopVpnService.class);
+                intent.setAction(com.proxy.wireopen.service.DoubleHopVpnService.ACTION_STOP);
+                startService(intent);
+            } else {
+                Intent intent = new Intent(this, UnifiedVpnService.class);
+                intent.setAction(UnifiedVpnService.ACTION_STOP_VPN);
+                startService(intent);
+            }
         } else {
             if (active == null) {
                 Toast.makeText(this, "请先选择或导入一个节点配置", Toast.LENGTH_SHORT).show();
@@ -2938,20 +3196,28 @@ public class MainActivity extends AppCompatActivity {
                 regionName = info.getName();
             }
             tvMiniGeoFlag.setText(flag);
-
             PresetPortItem activePort = findActivePresetPort(active);
-            boolean activeIsWg = active.getProtocolType() == ProtocolType.WIREGUARD;
-            tvMiniProtocolBadge.setText(activeIsWg ? "WG" : "OVPN");
-            tvMiniProtocolBadge.setBackgroundResource(activeIsWg
-                    ? R.drawable.bg_wireguard_badge : R.drawable.badge_rounded_bg);
-            tvMiniProtocolBadge.setTextColor(ContextCompat.getColor(this,
-                    activeIsWg ? R.color.wireguard_badge_text : R.color.brand_primary));
-            String transportTag = activePort != null ? activePort.getTransport() : "UDP";
-            int activePortNumber = (isPortManuallyOverridden && currentSelectedPort > 0)
-                    ? currentSelectedPort
-                    : (activePort != null ? activePort.getPort() : (activeIsWg ? 51820 : 1194));
-            tvMiniGeoIp.setText(transportTag + " :" + activePortNumber);
-            tvMiniGeoLocation.setText(regionName);
+
+            if (UnifiedVpnService.isDoubleHopManaged()) {
+                tvMiniProtocolBadge.setText("双跳 WG");
+                tvMiniProtocolBadge.setBackgroundResource(R.drawable.bg_wireguard_badge);
+                tvMiniProtocolBadge.setTextColor(ContextCompat.getColor(this, R.color.wireguard_badge_text));
+                tvMiniGeoIp.setText("sing-box");
+                tvMiniGeoLocation.setText(RegionDetector.normalizeDisplayName(active.getName()) + " (双跳出口)");
+            } else {
+                boolean activeIsWg = active.getProtocolType() == ProtocolType.WIREGUARD;
+                tvMiniProtocolBadge.setText(activeIsWg ? "WG" : "OVPN");
+                tvMiniProtocolBadge.setBackgroundResource(activeIsWg
+                        ? R.drawable.bg_wireguard_badge : R.drawable.badge_rounded_bg);
+                tvMiniProtocolBadge.setTextColor(ContextCompat.getColor(this,
+                        activeIsWg ? R.color.wireguard_badge_text : R.color.brand_primary));
+                String transportTag = activePort != null ? activePort.getTransport() : "UDP";
+                int activePortNumber = (isPortManuallyOverridden && currentSelectedPort > 0)
+                        ? currentSelectedPort
+                        : (activePort != null ? activePort.getPort() : (activeIsWg ? 51820 : 1194));
+                tvMiniGeoIp.setText(transportTag + " :" + activePortNumber);
+                tvMiniGeoLocation.setText(regionName);
+            }
 
             if (activePort != null && activePort.getLatencyMs() != null) {
                 long lat = activePort.getLatencyMs();
