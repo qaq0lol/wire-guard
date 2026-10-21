@@ -156,13 +156,26 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
             DoubleHopCrashJournal.record(this, "阶段 1：开始初始化 sing-box")
             initializeLibbox()
             DoubleHopCrashJournal.record(this, "阶段 1 完成：Libbox.setup 已返回")
-            if (!isStartupCurrent(token)) return
+            DoubleHopCrashJournal.record(
+                this,
+                "阶段 1 后状态检查：token=$token，currentGeneration=${startupGeneration.get()}，stopRequested=${stopOnce.get()}"
+            )
+            if (!isStartupCurrent(token)) {
+                DoubleHopCrashJournal.record(
+                    this,
+                    "启动在 Libbox.setup 后已被取消，跳过后续初始化：token=$token，currentGeneration=${startupGeneration.get()}，stopRequested=${stopOnce.get()}"
+                )
+                LogManager.warn("DoubleHopVpnService", "Libbox.setup 返回后启动请求已失效，停止继续创建内核")
+                return
+            }
 
             LogManager.info("DoubleHopVpnService", "启动阶段 2/4：创建命令服务")
-            DoubleHopCrashJournal.record(this, "阶段 2：创建 DoubleHopPlatform / CommandServer")
+            DoubleHopCrashJournal.record(this, "阶段 2A：即将创建 DoubleHopPlatform")
             val platform = DoubleHopPlatform(this)
+            DoubleHopCrashJournal.record(this, "阶段 2A 完成：DoubleHopPlatform 已创建")
+            DoubleHopCrashJournal.record(this, "阶段 2B：即将创建 libbox CommandServer")
             val createdServer = CommandServer(this, platform)
-            DoubleHopCrashJournal.record(this, "阶段 2 完成：CommandServer 已创建")
+            DoubleHopCrashJournal.record(this, "阶段 2B 完成：libbox CommandServer 已创建")
             val registered = synchronized(resourceLock) {
                 if (!isStartupCurrent(token)) {
                     false
@@ -527,6 +540,10 @@ class DoubleHopVpnService : VpnService(), CommandServerHandler {
     override fun onBind(intent: Intent): IBinder? = super.onBind(intent)
 
     override fun onDestroy() {
+        DoubleHopCrashJournal.record(
+            this,
+            "服务 onDestroy：starting=$starting，startupFinished=$startupFinished，stopRequested=${stopOnce.get()}，generation=${startupGeneration.get()}，commandServerPresent=${commandServer != null}，tunPresent=${activeTun != null}"
+        )
         if (starting || commandServer != null || platformInterface != null || activeTun != null) stopTunnel()
         super.onDestroy()
     }
